@@ -1,0 +1,277 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<!-- Include Tom Select CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<style>
+    /* Styling tweaks for Tom Select to match custom input theme */
+    .ts-wrapper.form-select {
+        padding: 0 !important;
+        border: none !important;
+        background: none !important;
+    }
+    .ts-control {
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.9rem !important;
+        color: var(--text) !important;
+        background-color: var(--white) !important;
+        box-shadow: none !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    .ts-wrapper.focus .ts-control {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.15) !important;
+    }
+    .ts-dropdown {
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        margin-top: 4px !important;
+        padding: 4px !important;
+        z-index: 1000 !important;
+    }
+    .ts-dropdown .option {
+        padding: 8px 12px !important;
+        border-radius: 6px !important;
+        font-size: 0.9rem !important;
+        cursor: pointer !important;
+    }
+    .ts-dropdown .active {
+        background-color: rgba(0, 78, 162, 0.08) !important;
+        color: var(--primary) !important;
+    }
+    /* Visual tweaks for warnings & status */
+    .text-warning-emphasis {
+        color: #854d0e !important;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="page-title-area mb-4">
+            <div>
+                <h1 class="page-title">{{ title }}</h1>
+                <p class="page-subtitle">{{ subtitle }}</p>
+            </div>
+        </div>
+
+        <div class="card-custom">
+            <div class="card-body p-4 p-md-5">
+                <form method="post" class="needs-validation" novalidate id="devolucion-form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-4 shadow-sm" role="alert">
+                            {% for error in form.non_field_errors %}
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <span>{{ error }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-4">
+                        <!-- Préstamo Select -->
+                        <div class="col-md-8">
+                            <label for="{{ form.prestamos_id_prestamo.id_for_label }}" class="form-label fw-bold text-dark">Seleccionar Préstamo</label>
+                            {{ form.prestamos_id_prestamo }}
+                            <div class="form-text text-muted small mt-1">
+                                <i class="fas fa-search me-1"></i> Escriba para buscar por Alumno o por Título de Material.
+                            </div>
+                            {% for error in form.prestamos_id_prestamo.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Estado del Material -->
+                        <div class="col-md-4">
+                            <label for="{{ form.estado_material.id_for_label }}" class="form-label fw-bold text-dark">{{ form.estado_material.label }}</label>
+                            {{ form.estado_material }}
+                            {% for error in form.estado_material.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Hidden fields to preserve Django model form binding -->
+                        <div class="visually-hidden">
+                            {{ form.multa }}
+                            {{ form.pago_multa }}
+                        </div>
+
+                        <!-- Recargo / Multa Section (Dynamic) -->
+                        <div class="col-12" id="seccion_multa_card" style="display: none;">
+                            <div class="card border-warning bg-warning bg-opacity-10 p-4 rounded-3 shadow-sm border-2">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                                    <div>
+                                        <h5 class="fw-bold text-warning-emphasis mb-1">
+                                            <i class="fas fa-exclamation-triangle me-2"></i> Retorno Fuera de Fecha
+                                        </h5>
+                                        <p class="text-muted mb-0">El préstamo excede el límite de devolución. Días de retraso: <span id="retraso_dias" class="fw-bold text-danger">0</span></p>
+                                    </div>
+                                    <div class="text-md-end">
+                                        <span class="small text-muted d-block">Recargo Calculado (1.500 Gs por día)</span>
+                                        <span class="fs-3 fw-bold text-danger" id="multa_display">0 Gs</span>
+                                    </div>
+                                </div>
+                                
+                                <hr class="my-3 opacity-25">
+                                
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                                    <div>
+                                        <span class="fw-semibold text-dark"><i class="fas fa-cash-register me-1"></i> ¿El alumno abona la multa en este momento?</span>
+                                    </div>
+                                    <div>
+                                        <div class="btn-group shadow-sm" role="group">
+                                            <button type="button" id="btn_pago_si" class="btn btn-outline-success px-4 py-2">
+                                                <i class="fas fa-check-circle me-2"></i> Paga la Multa
+                                            </button>
+                                            <button type="button" id="btn_pago_no" class="btn btn-outline-danger px-4 py-2 active">
+                                                <i class="fas fa-times-circle me-2"></i> No Paga
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="col-12">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-bold text-dark">{{ form.observaciones.label }}</label>
+                            {{ form.observaciones }}
+                            {% for error in form.observaciones.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr class="my-5 opacity-25">
+                    
+                    <div class="d-flex justify-content-end gap-3">
+                        <a href="{% url 'devolucion-list' %}" class="btn btn-light border px-4">Cancelar</a>
+                        <button type="submit" class="btn btn-primary-custom px-5">
+                            <i class="fas fa-save me-2"></i> Registrar Devolución
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load active/expired loans data serialized from view -->
+{{ prestamos_json|json_script:"prestamos-data" }}
+
+<!-- Include Tom Select JS and script logic -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const prestamosData = JSON.parse(document.getElementById('prestamos-data').textContent);
+        const serverTodayStr = "{{ hoy }}"; // YYYY-MM-DD
+        const serverToday = new Date(serverTodayStr + "T00:00:00");
+
+        const selectElement = document.getElementById('id_prestamos_id_prestamo');
+        const inputMulta = document.getElementById('id_multa');
+        const inputPagoMulta = document.getElementById('id_pago_multa');
+
+        const cardMulta = document.getElementById('seccion_multa_card');
+        const textRetrasoDias = document.getElementById('retraso_dias');
+        const textMultaDisplay = document.getElementById('multa_display');
+
+        const btnPagoSi = document.getElementById('btn_pago_si');
+        const btnPagoNo = document.getElementById('btn_pago_no');
+
+        // Function to update Multa UI state
+        function updateMultaState() {
+            const loanId = selectElement.value;
+            if (!loanId || !prestamosData[loanId]) {
+                cardMulta.style.display = 'none';
+                inputMulta.value = 0;
+                setPaymentStatus(false);
+                return;
+            }
+
+            const loan = prestamosData[loanId];
+            const due_date = new Date(loan.vencimiento + "T00:00:00");
+            
+            // Calculate differences in calendar days
+            const diffTime = serverToday - due_date;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+                const totalFine = diffDays * 1500;
+                inputMulta.value = totalFine;
+
+                // Update UI text labels
+                textRetrasoDias.textContent = diffDays;
+                textMultaDisplay.textContent = totalFine.toLocaleString('es-PY') + " Gs";
+                
+                // Show Multa card
+                cardMulta.style.display = 'block';
+            } else {
+                cardMulta.style.display = 'none';
+                inputMulta.value = 0;
+                setPaymentStatus(false);
+            }
+        }
+
+        // Helper to control the hidden pago_multa checkbox and UI buttons
+        function setPaymentStatus(isPaid) {
+            inputPagoMulta.checked = isPaid;
+            if (isPaid) {
+                btnPagoSi.classList.add('active', 'btn-success');
+                btnPagoSi.classList.remove('btn-outline-success');
+                btnPagoNo.classList.remove('active', 'btn-danger');
+                btnPagoNo.classList.add('btn-outline-danger');
+            } else {
+                btnPagoSi.classList.remove('active', 'btn-success');
+                btnPagoSi.classList.add('btn-outline-success');
+                btnPagoNo.classList.add('active', 'btn-danger');
+                btnPagoNo.classList.remove('btn-outline-danger');
+            }
+        }
+
+        // Listen for button group selections
+        btnPagoSi.addEventListener('click', function() {
+            setPaymentStatus(true);
+        });
+
+        btnPagoNo.addEventListener('click', function() {
+            setPaymentStatus(false);
+        });
+
+        // Initialize Tom Select
+        const ts = new TomSelect("#id_prestamos_id_prestamo", {
+            create: false,
+            placeholder: "Busque y seleccione un préstamo...",
+            allowEmptyOption: false,
+            maxOptions: 100,
+            onItemAdd: function() {
+                this.setTextboxValue('');
+                this.refreshOptions(false);
+            },
+            onChange: function(value) {
+                updateMultaState();
+            }
+        });
+
+        if (ts && ts.control_input) {
+            ts.control_input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const activeOption = ts.dropdown.querySelector('.active');
+                    if (!activeOption || activeOption.getAttribute('data-value') === '') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }
+            });
+        }
+
+        // Initial check on load (handles cases where a préstamo is pre-selected)
+        updateMultaState();
+    });
+</script>
+{% endblock %}

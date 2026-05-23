@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | Bibliosoft 2.0</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(0, 59, 122, 0.8)), url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border: none;
+            border-radius: 1.25rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 420px;
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: #ffffff;
+            padding: 3rem 2rem 1.5rem 2rem;
+            text-align: center;
+        }
+
+        .login-body {
+            padding: 1rem 2rem 2.5rem 2rem;
+        }
+
+        .form-control {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.15);
+            border-color: #004ea2;
+        }
+
+        .btn-login {
+            background-color: #004ea2;
+            border-color: #004ea2;
+            color: #ffffff;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background-color: #003b7a;
+            border-color: #003b7a;
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 78, 162, 0.3);
+        }
+
+        .text-blue {
+            color: #004ea2;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="login-header d-flex flex-column align-items-center">
+        {% load static %}
+        <img src="{% static 'images/logo_uci.png' %}" alt="UCI Logo" height="64" class="mb-3">
+        <h3 class="fw-bold mb-0 text-dark">Biblio<span class="text-blue">soft</span></h3>
+        <p class="text-dark mt-2 mb-0 small">Panel de Administración de la Biblioteca</p>
+    </div>
+    <div class="login-body">
+        {% if form.errors %}
+            <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <div>Usuario o contraseña incorrectos.</div>
+            </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_username" class="form-label fw-medium text-dark">Nombre de Usuario</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                    <input type="text" name="username" autofocus autofocus="" maxlength="150" class="form-control" placeholder="admin" required id="id_username">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="id_password" class="form-label fw-medium text-dark">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required id="id_password">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-login w-100 mb-3">
+                <i class="fas fa-sign-in-alt me-2"></i> Entrar al Panel
+            </button>
+            
+            <div class="text-center">
+                <a href="/" class="text-decoration-none text-muted small"><i class="fas fa-arrow-left me-1"></i> Volver al Portal</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

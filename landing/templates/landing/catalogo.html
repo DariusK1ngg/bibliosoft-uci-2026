@@ -1,0 +1,449 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Público - Bibliosoft</title>
+    <link rel="icon" type="image/png" href="{% static 'images/logo_uci.png' %}">
+    <meta name="description" content="Explora el catálogo completo de la Biblioteca Dr. Jesús René Haurón Acuña — Universidad Católica Campus Itapúa.">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary:    #004ea2;
+            --primary-dk: #003b7a;
+            --bg:         #f0f4f9;
+            --white:      #ffffff;
+            --text:       #1a2535;
+            --muted:      #6b7280;
+            --border:     #e2e8f0;
+            --celeste:    #38bdf8;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Navbar ── */
+        .navbar {
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            padding: 0.8rem 0;
+            font-family: 'Outfit', sans-serif;
+        }
+        .navbar .navbar-brand {
+            color: var(--primary) !important;
+        }
+        .navbar .nav-link {
+            color: var(--primary) !important;
+            font-weight: 400;
+            transition: color .18s;
+            padding: 0.5rem 1rem !important;
+        }
+        .navbar .nav-link:hover,
+        .navbar .nav-link.active {
+            color: var(--celeste) !important;
+        }
+        .text-warning {
+            color: var(--celeste) !important;
+        }
+        .btn-outline-warning {
+            color: var(--celeste) !important;
+            border-color: var(--celeste) !important;
+            border-width: 2px;
+            font-weight: 400;
+        }
+        .btn-outline-warning:hover {
+            background-color: var(--celeste) !important;
+            color: #ffffff !important;
+        }
+        .navbar-toggler {
+            border: none;
+        }
+        .navbar-toggler-icon {
+            filter: invert(1);
+        }
+
+        /* ── Hero banner ── */
+        .page-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dk) 100%);
+            color: white;
+            padding: 8rem 0 3.5rem; /* Espaciado extra para el navbar fixed-top */
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .page-hero h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.5px; }
+        .page-hero p  { opacity: .8; font-size: 1.1rem; margin-bottom: 0; }
+
+        /* ── Filter Sidebar Card ── */
+        .filter-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.8rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,.03);
+        }
+        .filter-card h5 {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-select, .form-control {
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 0.6rem 0.8rem;
+            font-size: 0.9rem;
+            color: var(--text);
+            background-color: #f8fafc;
+            transition: all 0.2s;
+        }
+        .form-select:focus, .form-control:focus {
+            background-color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.15);
+        }
+
+        /* ── Material Item Cards ── */
+        .material-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .material-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,78,162,0.08);
+        }
+        .material-body {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .material-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-color: rgba(0, 78, 162, 0.08);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .material-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        .material-author {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 1.25rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .meta-label {
+            color: var(--muted);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        .meta-value {
+            color: var(--text);
+            font-weight: 600;
+        }
+        .badge-status {
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: auto;
+            width: fit-content;
+        }
+        .badge-disponible {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+        .badge-nodisponible {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .badge-format {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        /* ── Empty State ── */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,.02);
+        }
+        .empty-icon {
+            font-size: 4rem;
+            color: var(--muted);
+            opacity: 0.4;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--primary-dk);
+            color: white;
+            text-align: center;
+            padding: 18px 0;
+            font-size: .8rem;
+            opacity: .95;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════ NAVBAR ═══════ -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-3 d-flex align-items-center gap-2" href="/">
+            <img src="{% static 'images/logo_uci.png' %}" alt="UCI Logo" height="48" class="d-inline-block align-top bg-white p-1 rounded">
+            <span>Biblio<span class="text-warning">soft</span></span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-end align-items-lg-center">
+                <li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#servicios">Servicios</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{% url 'catalogo_publico' %}">Catálogo</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'contacto' %}">Contacto</a></li>
+                <li class="nav-item ms-lg-3 mt-3 mt-lg-0 d-none d-lg-block">
+                    <a class="btn btn-outline-warning rounded-pill px-4" href="{% url 'dashboard' %}">Ingresar</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="page-hero">
+    <div class="container">
+        <div class="mb-3">
+            <span style="background:rgba(255,255,255,.15);border-radius:50px;padding:5px 16px;font-size:.85rem;font-weight:500;">
+                <i class="fas fa-search me-1"></i> Búsqueda de Libros y Recursos
+            </span>
+        </div>
+        <h1>Catálogo de Biblioteca</h1>
+        <p>Busca materiales disponibles en la biblioteca "Dr. Jesús René Haurón Acuña"</p>
+    </div>
+</section>
+
+<!-- ── Content ── -->
+<main class="flex-grow-1 py-5">
+    <div class="container">
+        <div class="row g-4">
+            
+            <!-- Sidebar de Filtros -->
+            <div class="col-lg-3">
+                <div class="filter-card">
+                    <h5><i class="fas fa-sliders-h"></i> Filtrar Acervo</h5>
+                    <form method="get" action="{% url 'catalogo_publico' %}" id="filterForm">
+                        
+                        <!-- Buscar por texto -->
+                        <div class="mb-3">
+                            <label class="form-label" for="searchQuery">Búsqueda rápida</label>
+                            <div class="input-group">
+                                <input type="text" name="q" id="searchQuery" class="form-control" placeholder="Título, autor, ISBN..." value="{{ query }}">
+                                {% if query %}
+                                    <a href="{% url 'catalogo_publico' %}" class="btn btn-outline-secondary d-flex align-items-center"><i class="fas fa-times"></i></a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Categorías -->
+                        <div class="mb-3">
+                            <label class="form-label" for="filterCategoria">Categoría</label>
+                            <select name="categoria" id="filterCategoria" class="form-select" onchange="this.form.submit()">
+                                <option value="">Todas las categorías</option>
+                                {% for cat in categorias %}
+                                    <option value="{{ cat.id_categoria }}" {% if selected_categoria == cat.id_categoria %}selected{% endif %}>{{ cat.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Autores -->
+                        <div class="mb-3">
+                            <label class="form-label" for="filterAutor">Autor</label>
+                            <select name="autor" id="filterAutor" class="form-select" onchange="this.form.submit()">
+                                <option value="">Todos los autores</option>
+                                {% for aut in autores %}
+                                    <option value="{{ aut.id_autor }}" {% if selected_autor == aut.id_autor %}selected{% endif %}>{{ aut.nombre }} {{ aut.apellido }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Tipo de Documento -->
+                        <div class="mb-3">
+                            <label class="form-label" for="filterTipo">Formato</label>
+                            <select name="tipo" id="filterTipo" class="form-select" onchange="this.form.submit()">
+                                <option value="">Todos los formatos</option>
+                                {% for t in tipos %}
+                                    <option value="{{ t.id_tipo }}" {% if selected_tipo == t.id_tipo %}selected{% endif %}>{{ t.descripcion }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Disponibilidad -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="disponible" value="1" id="filterDisponible" {% if solo_disponibles %}checked{% endif %} onchange="this.form.submit()">
+                                <label class="form-check-label fw-medium" for="filterDisponible" style="font-size: 0.85rem;">Solo disponibles</label>
+                            </div>
+                        </div>
+
+                        <!-- Resetear -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill py-2 fw-semibold" style="background-color: var(--primary); border: none;">Aplicar Filtros</button>
+                            <a href="{% url 'catalogo_publico' %}" class="btn btn-outline-secondary btn-sm rounded-pill py-2 fw-semibold">Limpiar todo</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Listado de Materiales -->
+            <div class="col-lg-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <p class="mb-0 text-muted">Se encontraron <strong>{{ materiales.count }}</strong> recurso{{ materiales.count|pluralize }}</p>
+                </div>
+
+                {% if materiales %}
+                    <div class="row g-4">
+                        {% for mat in materiales %}
+                            <div class="col-md-6 col-xl-4">
+                                <div class="material-card">
+                                    <div class="material-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="material-icon-wrapper">
+                                                {% if mat.tipo_documento.descripcion|lower == 'libro' %}
+                                                    <i class="fas fa-book"></i>
+                                                {% elif mat.tipo_documento.descripcion|lower == 'tesis' %}
+                                                    <i class="fas fa-graduation-cap"></i>
+                                                {% elif mat.tipo_documento.descripcion|lower == 'revista' %}
+                                                    <i class="fas fa-journal-whills"></i>
+                                                {% else %}
+                                                    <i class="fas fa-file-alt"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="badge badge-status badge-format">{{ mat.tipo_documento.descripcion }}</span>
+                                        </div>
+
+                                        <h3 class="material-title">{{ mat.titulo }}</h3>
+                                        <p class="material-author">por <span class="fw-semibold">{{ mat.autor }}</span></p>
+
+                                        <div class="meta-grid">
+                                            <div class="meta-item">
+                                                <span class="meta-label">Categoría</span>
+                                                <span class="meta-value text-truncate" title="{{ mat.categoria.nombre }}">{{ mat.categoria.nombre }}</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <span class="meta-label">Año</span>
+                                                <span class="meta-value">{{ mat.año_publicacion }}</span>
+                                            </div>
+
+                                            <div class="meta-item">
+                                                <span class="meta-label">ISBN/Código</span>
+                                                <span class="meta-value">{{ mat.isbn|default:"S/N" }}</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                                            {% if mat.cantidad_disponible > 0 %}
+                                                <span class="badge badge-status badge-disponible">
+                                                    <i class="fas fa-check-circle"></i> Disponible
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-status badge-nodisponible">
+                                                    <i class="fas fa-times-circle"></i> Sin stock
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Estado vacío -->
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <h4 class="fw-bold">No se encontraron materiales</h4>
+                        <p class="text-muted">Prueba a buscar con otros términos o limpia los filtros activos.</p>
+                        <a href="{% url 'catalogo_publico' %}" class="btn btn-primary rounded-pill px-4 mt-2" style="background-color: var(--primary); border: none;">Ver todo el catálogo</a>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<!-- ── Footer ── -->
+<footer>
+    &copy; 2026 Universidad Católica "Nuestra Señora de la Asunción" — Campus Itapúa |
+    Biblioteca "Dr. Jesús René Haurón Acuña" | Desarrollado por 4to año Ing. Informática
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

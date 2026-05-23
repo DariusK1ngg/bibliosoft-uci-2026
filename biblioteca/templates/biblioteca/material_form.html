@@ -1,0 +1,724 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<!-- Background materials list (identical to material_list.html) -->
+<div class="page-title-area">
+    <div>
+        <h1 class="page-title">Acervo Bibliográfico</h1>
+        <p class="page-subtitle">Gestión y control de todos los materiales registrados en el sistema</p>
+    </div>
+    
+    <!-- Tres botones solicitados para la creación según el tipo de material -->
+    <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
+        <a href="{% url 'material-create' %}?tipo=libro" class="btn btn-primary-custom d-flex align-items-center gap-2">
+            <i class="fas fa-book"></i> + Libro
+        </a>
+        <a href="{% url 'material-create' %}?tipo=trabajo" class="btn btn-info text-white d-flex align-items-center gap-2" style="background-color: #004ea2; border-color: #004ea2;">
+            <i class="fas fa-graduation-cap"></i> + Trabajo de Investigación
+        </a>
+        <a href="{% url 'material-create' %}?tipo=otro" class="btn btn-secondary d-flex align-items-center gap-2">
+            <i class="fas fa-folder-open"></i> + Otros Materiales
+        </a>
+    </div>
+</div>
+
+<div class="card-custom mt-3" style="opacity: 0.65; pointer-events: none; filter: blur(0.5px);">
+    <div class="card-header-custom d-flex justify-content-between align-items-center bg-white">
+        <h5 class="mb-0 text-dark fw-bold">Listado de Materiales</h5>
+        
+        <!-- Search form -->
+        <form action="{% url 'material-list' %}" method="get" class="d-flex" style="max-width: 300px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar material..." disabled>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th width="12%">ISBN</th>
+                    <th width="12%">ISSN</th>
+                    <th width="26%">Título</th>
+                    <th width="10%" class="text-center">Año Pub.</th>
+                    <th width="10%" class="text-center">Estado</th>
+                    <th width="10%">N° Entrada</th>
+                    <th width="10%">Tipo</th>
+                    <th width="10%" class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materiales %}
+                <tr>
+                    <td>
+                        {% if material.isbn %}
+                            <span class="badge bg-light text-dark border small">{{ material.isbn }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if material.issn %}
+                            <span class="badge bg-light text-dark border small">{{ material.issn }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ material.titulo }}</div>
+                        {% if material.autores_id_autor.all %}
+                            <div class="small text-muted"><i class="fas fa-pen-nib me-1 opacity-75"></i> {{ material.autores_id_autor.all|join:", " }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {{ material.año_publicacion|default:"—" }}
+                    </td>
+                    <td class="text-center">
+                        {% if material.estado_material == 'DISPONIBLE' or material.estado_material == 'Disponible' %}
+                            <span class="badge badge-custom badge-soft-success">
+                                <i class="fas fa-check-circle me-1"></i> Disponible
+                            </span>
+                        {% elif material.estado_material == 'PRESTADO' or material.estado_material == 'Prestado' %}
+                            <span class="badge badge-custom badge-soft-warning">
+                                <i class="fas fa-handholding me-1"></i> Prestado
+                            </span>
+                        {% elif material.estado_material == 'Permanente' or material.estado_material == 'PERMANENTE' %}
+                            <span class="badge badge-custom badge-soft-info">
+                                <i class="fas fa-shield-alt me-1"></i> Permanente
+                            </span>
+                        {% else %}
+                            <span class="badge badge-custom badge-soft-danger">
+                                {{ material.estado_material }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ material.numero_entrada|default:"—" }}
+                    </td>
+                    <td>
+                        <span class="small fw-semibold text-secondary">
+                            {{ material.get_tipo_registro_display }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-sm btn-light border text-primary" disabled><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger" disabled><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i>
+                        <p class="mb-0">No se encontraron materiales registrados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Overlay for the Form -->
+<div class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                {% if object %}Editar{% else %}Agregar{% endif %} 
+                {% if tipo_registro == 'LIBRO' %}Libro{% elif tipo_registro == 'TRABAJO_INVESTIGACION' %}Trabajo de Investigación{% else %}Otro Material{% endif %}
+            </h5>
+            <a href="{% url 'material-list' %}" class="custom-modal-close" title="Cerrar">&times;</a>
+        </div>
+        
+        <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <div class="custom-modal-body">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-4">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if tipo_registro == 'LIBRO' %}
+                    <!-- LIBRO FORM LAYOUT -->
+                    <div class="row g-2">
+                        <!-- TITULO -->
+                        <div class="col-md-6">
+                            <label class="form-label-custom">TITULO <span class="text-asterisk">*</span></label>
+                            {{ form.titulo }}
+                            {% for error in form.titulo.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- ISBN -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">ISBN</label>
+                            {{ form.isbn }}
+                            {% for error in form.isbn.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- AÑO DE PUBLICACIÓN -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">AÑO DE PUBLICACIÓN <span class="text-asterisk">*</span></label>
+                            {{ form.año_publicacion }}
+                            {% for error in form.año_publicacion.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- EDITORIAL -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">EDITORIAL <span class="text-asterisk">*</span></label>
+                            {{ form.editoriales_id_editorial }}
+                            {% for error in form.editoriales_id_editorial.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- AUTOR/S -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">AUTOR/S <span class="text-asterisk">*</span></label>
+                            {{ form.autores_id_autor }}
+                            {% for error in form.autores_id_autor.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- NUMERACIÓN DEWEY -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">NUMERACIÓN DEWEY <span class="text-asterisk">*</span></label>
+                            {{ form.numeracion_dewey }}
+                            {% for error in form.numeracion_dewey.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- NÚMERO DE ENTRADA -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
+                            {{ form.numero_entrada }}
+                            {% for error in form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- EDICIÓN -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">EDICIÓN <span class="text-asterisk">*</span></label>
+                            {{ form.edicion }}
+                            {% for error in form.edicion.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- ESTADO -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">ESTADO <span class="text-asterisk">*</span></label>
+                            {{ form.estado_material }}
+                            {% for error in form.estado_material.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- FECHA INGRESO -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">FECHA INGRESO <span class="text-asterisk">*</span></label>
+                            {{ form.fecha_ingreso }}
+                            {% for error in form.fecha_ingreso.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- CARRERA/S -->
+                        <div class="col-md-6">
+                            <label class="form-label-custom">CARRERA/S <span class="text-asterisk">*</span></label>
+                            {{ form.carreras }}
+                            {% for error in form.carreras.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- GENERO/S -->
+                        <div class="col-md-6">
+                            <label class="form-label-custom">GENERO/S <span class="text-asterisk">*</span></label>
+                            {{ form.generos }}
+                            {% for error in form.generos.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                {% elif tipo_registro == 'TRABAJO_INVESTIGACION' %}
+                    <!-- TRABAJO DE INVESTIGACION FORM LAYOUT -->
+                    <div class="row g-2">
+                        <!-- TITULO -->
+                        <div class="col-md-8">
+                            <label class="form-label-custom">TITULO <span class="text-asterisk">*</span></label>
+                            {{ form.titulo }}
+                            {% for error in form.titulo.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- AÑO DE ELABORACIÓN -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">AÑO DE ELABORACIÓN <span class="text-asterisk">*</span></label>
+                            {{ form.año_publicacion }}
+                            {% for error in form.año_publicacion.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- AUTOR/S -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">AUTOR/S <span class="text-asterisk">*</span></label>
+                            {{ form.autores_id_autor }}
+                            {% for error in form.autores_id_autor.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- CARRERA -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">CARRERA <span class="text-asterisk">*</span></label>
+                            {{ form.carreras }}
+                            {% for error in form.carreras.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- TIPO DE TRABAJO -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">TIPO DE TRABAJO <span class="text-asterisk">*</span></label>
+                            {{ form.tipo_trabajo }}
+                            {% for error in form.tipo_trabajo.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- TITULO DE GRADO -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">TITULO DE GRADO <span class="text-asterisk">*</span></label>
+                            {{ form.titulo_grado }}
+                            {% for error in form.titulo_grado.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- NÚMERO DE ENTRADA -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
+                            {{ form.numero_entrada }}
+                            {% for error in form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- ESTADO -->
+                        <div class="col-md-2">
+                            <label class="form-label-custom">ESTADO <span class="text-asterisk">*</span></label>
+                            {{ form.estado_material }}
+                            {% for error in form.estado_material.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- FECHA INGRESO -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">FECHA INGRESO <span class="text-asterisk">*</span></label>
+                            {{ form.fecha_ingreso }}
+                            {% for error in form.fecha_ingreso.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                {% else %}
+                    <!-- OTROS MATERIALES FORM LAYOUT -->
+                    <div class="row g-2">
+                        <!-- TITULO -->
+                        <div class="col-md-9">
+                            <label class="form-label-custom">TITULO <span class="text-asterisk">*</span></label>
+                            {{ form.titulo }}
+                            {% for error in form.titulo.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- ISSN -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">ISSN</label>
+                            {{ form.issn }}
+                            {% for error in form.issn.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- TIPO DE MATERIAL -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">TIPO DE MATERIAL <span class="text-asterisk">*</span></label>
+                            {{ form.tipo_material }}
+                            {% for error in form.tipo_material.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- AÑO DE PUBLICACIÓN -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">AÑO DE PUBLICACIÓN <span class="text-asterisk">*</span></label>
+                            {{ form.año_publicacion }}
+                            {% for error in form.año_publicacion.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- NÚMERO DE ENTRADA -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
+                            {{ form.numero_entrada }}
+                            {% for error in form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- ESTADO -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">ESTADO <span class="text-asterisk">*</span></label>
+                            {{ form.estado_material }}
+                            {% for error in form.estado_material.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- FECHA INGRESO -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">FECHA INGRESO <span class="text-asterisk">*</span></label>
+                            {{ form.fecha_ingreso }}
+                            {% for error in form.fecha_ingreso.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="custom-modal-footer d-flex justify-content-end gap-2">
+                <a href="{% url 'material-list' %}" class="btn-close-custom">Cerrar</a>
+                <button type="submit" class="btn-save-custom">Guardar Datos</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Modal overlay styling to cover background */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+
+    /* Modal card layout matching the user mockup */
+    .custom-modal-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+        width: 100%;
+        max-width: 950px;
+        display: flex;
+        flex-direction: column;
+        max-height: 88vh;
+        border: 1px solid rgba(0,0,0,0.15);
+        animation: modalFadeIn 0.2s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* Header styling with a clean border */
+    .custom-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 1.5rem;
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .custom-modal-title {
+        font-size: 1.15rem;
+        font-weight: 500;
+        color: #444444;
+        margin: 0;
+    }
+
+    .custom-modal-close {
+        font-size: 1.4rem;
+        color: #cccccc;
+        text-decoration: none;
+        transition: color 0.15s;
+        font-weight: bold;
+    }
+
+    .custom-modal-close:hover {
+        color: #999999;
+    }
+
+    .custom-modal-body {
+        padding: 1.25rem 1.5rem;
+        overflow-y: auto;
+    }
+
+    .custom-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.65rem;
+        padding: 0.85rem 1.5rem;
+        border-top: 1px solid #e5e5e5;
+        background-color: #ffffff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+    /* Form Label Styling (Bold and Uppercase as requested) */
+    .form-label-custom {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #333333;
+        margin-bottom: 0.35rem;
+        display: inline-block;
+        letter-spacing: 0.3px;
+    }
+
+    .text-asterisk {
+        color: #cc0000;
+        font-weight: bold;
+        margin-left: 2px;
+    }
+
+    /* Inputs visual customization: matching mockup borders and background */
+    .custom-modal-body .form-control,
+    .custom-modal-body .form-select {
+        border-radius: 4px;
+        border: 1px solid #cccccc;
+        background-color: #ffffff;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+        color: #495057;
+        box-shadow: none;
+        transition: border-color 0.15s;
+    }
+
+    .custom-modal-body .form-control:focus,
+    .custom-modal-body .form-select:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+    }
+
+    /* Hide up/down arrows (spinners) for input number fields */
+    .custom-modal-body input[type="number"]::-webkit-outer-spin-button,
+    .custom-modal-body input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        appearance: none; /* Standard property */
+        margin: 0;
+    }
+    .custom-modal-body input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield; /* Standard property */
+    }
+
+    /* Date and multiple selects heights and styles */
+    .custom-modal-body select[multiple] {
+        height: auto;
+        min-height: 38px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .custom-modal-body textarea {
+        height: 55px;
+        resize: none;
+    }
+
+    /* Buttons styling - Cerrar (white/grey) and Guardar Datos (blue) */
+    .btn-close-custom {
+        background-color: #ffffff;
+        border: 1px solid #cccccc;
+        color: #333333;
+        font-size: 0.85rem;
+        padding: 0.45rem 1.25rem;
+        border-radius: 4px;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .btn-close-custom:hover {
+        background-color: #f6f6f6;
+        border-color: #b5b5b5;
+        color: #111111;
+    }
+
+    .btn-save-custom {
+        background-color: #3182ce;
+        border: 1px solid #3182ce;
+        color: #ffffff;
+        font-size: 0.85rem;
+        padding: 0.45rem 1.4rem;
+        border-radius: 4px;
+        font-weight: 500;
+        transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .btn-save-custom:hover {
+        background-color: #2b6cb0;
+        border-color: #2b6cb0;
+    }
+</style>
+
+<!-- Tom Select CSS & JS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+    /* Tom Select customized styles to match mockup exactly */
+    .ts-wrapper.form-select,
+    .ts-wrapper.form-control {
+        border: 1px solid #cccccc !important;
+        border-radius: 4px !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    .ts-control {
+        border: none !important;
+        background: #ffffff !important;
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        color: #495057 !important;
+        min-height: 33px !important;
+        border-radius: 4px !important;
+    }
+    .ts-dropdown {
+        border: 1px solid #ced4da !important;
+        border-radius: 4px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        font-size: 0.85rem !important;
+        z-index: 2100 !important; /* Float above modal overlay (z-index: 2000) */
+    }
+    .ts-dropdown .active {
+        background-color: #3182ce !important;
+        color: #ffffff !important;
+    }
+    .ts-dropdown .option:hover {
+        background-color: #f0f4f9;
+        color: #333333;
+    }
+    .ts-dropdown .option[data-value=""] {
+        display: none !important; /* Hide empty option inside dropdown list */
+    }
+    .ts-wrapper.multi .ts-control > div {
+        background-color: #e2e8f0 !important;
+        color: #333333 !important;
+        border-radius: 3px !important;
+        padding: 2px 8px !important;
+        font-size: 0.8rem !important;
+        margin: 2px !important;
+    }
+    .ts-wrapper.multi .ts-control > div .remove {
+        border-left: 1px solid #cbd5e1 !important;
+        margin-left: 5px !important;
+        padding-left: 4px !important;
+    }
+    .no-results {
+        padding: 8px 12px;
+        color: #999;
+        font-size: 0.85rem;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Prevent scroll on number inputs to avoid incrementing/decrementing
+        document.addEventListener('wheel', function(e) {
+            if (document.activeElement && document.activeElement.type === 'number') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        const selectors = [
+            '#id_editoriales_id_editorial',
+            '#id_autores_id_autor',
+            '#id_carreras',
+            '#id_generos',
+            '#id_tipo_trabajo',
+            '#id_tipo_material'
+        ];
+        
+        selectors.forEach(selector => {
+            const el = document.querySelector(selector);
+            if (el) {
+                const isMultiple = el.hasAttribute('multiple');
+                
+                // Specific placeholders requested by the user
+                let placeholderText = isMultiple ? "Seleccione una o más opciones..." : "Seleccione una opción...";
+                if (selector === '#id_editoriales_id_editorial' || 
+                    selector === '#id_autores_id_autor' || 
+                    selector === '#id_tipo_trabajo' || 
+                    selector === '#id_tipo_material') {
+                    placeholderText = "Seleccione una o más opciones...";
+                }
+
+                const ts = new TomSelect(el, {
+                    plugins: isMultiple ? ['remove_button'] : [],
+                    create: false,
+                    placeholder: placeholderText,
+                    allowEmptyOption: false,
+                    maxOptions: 100,
+                    dropdownParent: 'body', // Float over the modal to avoid clipping & scrollbars
+                    onItemAdd: function() {
+                        this.setTextboxValue('');
+                        this.refreshOptions(false);
+                    },
+                    render: {
+                        no_results: function(data, escape) {
+                            return '<div class="no-results">No se encontraron coincidencias para "' + escape(data.input) + '"</div>';
+                        }
+                    }
+                });
+
+                if (ts && ts.control_input) {
+                    ts.control_input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            const activeOption = ts.dropdown.querySelector('.active');
+                            if (!activeOption || activeOption.getAttribute('data-value') === '') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

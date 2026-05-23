@@ -1,0 +1,142 @@
+:root {
+    --primary-color:   #004ea2;
+    --primary-dk:      #003b7a;
+    --celeste:         #38bdf8;   /* color celeste accent */
+    --celeste-dk:      #0ea5e9;
+    --dark-bg:         #0f172a;
+    --text-light:      #f8fafc;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    overflow-x: hidden;
+}
+
+/* ── Navbar azul sólido igual a la página de contacto ── */
+.navbar {
+    background-color: #ffffff !important;
+    backdrop-filter: none;
+    border-bottom: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    padding: 0.8rem 0;
+}
+
+.navbar .navbar-brand {
+    color: var(--primary-color) !important;
+}
+
+.navbar-toggler {
+    border: none;
+}
+
+.navbar-toggler-icon {
+    filter: invert(1);
+}
+
+.navbar .nav-link {
+    color: var(--primary-color) !important;
+    font-weight: 400;
+    transition: color .18s;
+    padding: 0.5rem 1rem !important;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    color: var(--celeste) !important;
+}
+
+/* ── Hero ── */
+.hero-section {
+    min-height: 100vh;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(0, 59, 122, 0.8)), url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    color: white;
+    padding-top: 80px;
+}
+
+/* ── Botón principal (celeste en lugar de amarillo) ── */
+.btn-primary-custom {
+    background-color: var(--celeste);
+    color: #0f172a;
+    border: none;
+    padding: 12px 30px;
+    font-weight: 700;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-custom:hover {
+    background-color: var(--celeste-dk);
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* ── Textos accent (antes text-warning) ── */
+.text-warning {
+    color: var(--celeste) !important;
+}
+
+/* ── Botones outline-warning → outline celeste ── */
+.btn-outline-warning {
+    color: var(--celeste) !important;
+    border-color: var(--celeste) !important;
+    font-weight: 400;
+    border-width: 2px;
+}
+.btn-outline-warning:hover {
+    background-color: var(--celeste) !important;
+    color: #0f172a !important;
+}
+
+/* ── Botones warning (sección app, footer, etc.) ── */
+.btn-warning {
+    background-color: var(--celeste) !important;
+    border-color: var(--celeste) !important;
+    color: #0f172a !important;
+    font-weight: 700;
+}
+.btn-warning:hover {
+    background-color: var(--celeste-dk) !important;
+    border-color: var(--celeste-dk) !important;
+    color: #fff !important;
+}
+
+/* ── Glass Card ── */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-10px);
+}
+
+/* ── Search box accent ── */
+.search-box input:focus {
+    box-shadow: none;
+    background-color: rgba(255,255,255,0.1) !important;
+    border: 1px solid var(--celeste) !important;
+}
+
+/* ── Íconos de sección servicios ── */
+.feature-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+/* ── Footer ── */
+footer {
+    background: var(--primary-color);
+    color: white;
+    padding: 60px 0 20px;
+}

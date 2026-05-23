@@ -1,0 +1,134 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="page-title-area">
+    <div>
+        <h1 class="page-title">Acervo Bibliográfico</h1>
+        <p class="page-subtitle">Gestión y control de todos los materiales registrados en el sistema</p>
+    </div>
+    
+    <!-- Tres botones solicitados para la creación según el tipo de material -->
+    <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
+        <a href="{% url 'material-create' %}?tipo=libro" class="btn btn-primary-custom d-flex align-items-center gap-2">
+            <i class="fas fa-book"></i> + Libro
+        </a>
+        <a href="{% url 'material-create' %}?tipo=trabajo" class="btn btn-info text-white d-flex align-items-center gap-2" style="background-color: #004ea2; border-color: #004ea2;">
+            <i class="fas fa-graduation-cap"></i> + Trabajo de Investigación
+        </a>
+        <a href="{% url 'material-create' %}?tipo=otro" class="btn btn-secondary d-flex align-items-center gap-2">
+            <i class="fas fa-folder-open"></i> + Otros Materiales
+        </a>
+    </div>
+</div>
+
+<div class="card-custom mt-3">
+    <div class="card-header-custom d-flex justify-content-between align-items-center bg-white">
+        <h5 class="mb-0 text-dark fw-bold">Listado de Materiales</h5>
+        
+        <!-- Search form -->
+        <form action="{% url 'material-list' %}" method="get" class="d-flex" style="max-width: 300px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar material...">
+                <button type="submit" class="btn btn-secondary d-none">Buscar</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th width="12%">ISBN</th>
+                    <th width="12%">ISSN</th>
+                    <th width="26%">Título</th>
+                    <th width="10%" class="text-center">Año Pub.</th>
+                    <th width="10%" class="text-center">Estado</th>
+                    <th width="10%">N° Entrada</th>
+                    <th width="10%">Tipo</th>
+                    <th width="10%" class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materiales %}
+                <tr>
+                    <td>
+                        {% if material.isbn %}
+                            <span class="badge bg-light text-dark border small">{{ material.isbn }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if material.issn %}
+                            <span class="badge bg-light text-dark border small">{{ material.issn }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ material.titulo }}</div>
+                        {% if material.autores_id_autor.all %}
+                            <div class="small text-muted"><i class="fas fa-pen-nib me-1 opacity-75"></i> {{ material.autores_id_autor.all|join:", " }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {{ material.año_publicacion|default:"—" }}
+                    </td>
+                    <td class="text-center">
+                        {% if material.estado_material == 'DISPONIBLE' or material.estado_material == 'Disponible' %}
+                            <span class="badge badge-custom badge-soft-success">
+                                <i class="fas fa-check-circle me-1"></i> Disponible
+                            </span>
+                        {% elif material.estado_material == 'PRESTADO' or material.estado_material == 'Prestado' %}
+                            <span class="badge badge-custom badge-soft-warning">
+                                <i class="fas fa-handholding me-1"></i> Prestado
+                            </span>
+                        {% elif material.estado_material == 'Permanente' or material.estado_material == 'PERMANENTE' %}
+                            <span class="badge badge-custom badge-soft-info">
+                                <i class="fas fa-shield-alt me-1"></i> Permanente
+                            </span>
+                        {% else %}
+                            <span class="badge badge-custom badge-soft-danger">
+                                {{ material.estado_material }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ material.numero_entrada|default:"—" }}
+                    </td>
+                    <td>
+                        <span class="small fw-semibold text-secondary">
+                            {{ material.get_tipo_registro_display }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            <a href="{% url 'material-update' material.id_material %}" class="btn btn-sm btn-light border text-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if material.tiene_prestamos %}
+                                <button class="btn btn-sm btn-light border text-muted" title="No se puede eliminar: tiene préstamos asociados" style="cursor: not-allowed; opacity: 0.6;" disabled>
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            {% else %}
+                                <a href="{% url 'material-delete' material.id_material %}" class="btn btn-sm btn-light border text-danger" title="Borrar">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i>
+                        <p class="mb-0">No se encontraron materiales registrados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

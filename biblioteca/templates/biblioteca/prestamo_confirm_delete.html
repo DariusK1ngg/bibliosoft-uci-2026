@@ -1,0 +1,37 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card-custom text-center p-5 mt-4">
+            <div class="mb-4">
+                <span class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style="width: 80px; height: 80px;">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                </span>
+            </div>
+            <h3 class="fw-bold mb-3 text-dark">¿Confirmar Eliminación de Préstamo?</h3>
+            <p class="text-muted mb-4">
+                ¿Estás seguro de que deseas eliminar el préstamo <strong>#{{ object.id_prestamo }}</strong>?<br>
+                <strong>Alumno:</strong> {{ object.ALUMNOS_id_alumno.nombre }} {{ object.ALUMNOS_id_alumno.apellido }}<br>
+                <strong>Material:</strong> {{ object.MATERIALES_id_material.titulo }}<br>
+                <strong>Fecha Préstamo:</strong> {{ object.fecha_prestamo|date:"d/m/Y" }}
+            </p>
+            {% if object.estado != 'DEVUELTO' %}
+            <div class="alert alert-warning mb-4 text-start">
+                <i class="fas fa-info-circle me-2"></i> Como este préstamo se encuentra en estado <strong>{{ object.get_estado_display }}</strong>, al eliminarlo se reintegrará 1 unidad al stock disponible del material.
+            </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'prestamo-list' %}" class="btn btn-light border px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-danger px-5">
+                        <i class="fas fa-trash-alt me-2"></i> Confirmar y Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

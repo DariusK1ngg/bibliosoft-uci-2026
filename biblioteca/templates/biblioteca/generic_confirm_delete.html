@@ -1,0 +1,27 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card-custom text-center p-5 mt-4">
+            <div class="mb-4">
+                <span class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style="width: 80px; height: 80px;">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                </span>
+            </div>
+            <h3 class="fw-bold mb-3 text-dark">¿Confirmar Eliminación?</h3>
+            <p class="text-muted mb-4">¿Estás seguro de que deseas eliminar el registro <strong>"{{ object.descripcion|default:object }}"</strong>? Esta acción no se puede deshacer y podría afectar otros registros vinculados en el sistema.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ cancel_url }}" class="btn btn-light border px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-danger px-5">
+                        <i class="fas fa-trash-alt me-2"></i> Confirmar y Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

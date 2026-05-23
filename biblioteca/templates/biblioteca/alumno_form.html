@@ -1,0 +1,531 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="page-title-area mb-4">
+            <div>
+                <h1 class="page-title">{% if object %}Editar Alumno{% else %}Nuevo Alumno{% endif %}</h1>
+                <p class="page-subtitle">{% if object %}Modificando perfil de {{ object.nombre }} {{ object.apellido }}{% else %}Registra un nuevo estudiante en el acervo{% endif %}</p>
+            </div>
+        </div>
+
+        <div class="card-custom shadow-sm" style="border: 2px solid #475569; border-radius: 8px;">
+            <div class="card-body p-4 p-md-5 bg-white">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-4">
+                            {% for error in form.non_field_errors %}
+                                <div><i class="fas fa-exclamation-circle me-2"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- I - DATOS PERSONALES -->
+                    <div class="section-container">
+                        <div class="section-title-box">
+                            I – DATOS PERSONALES
+                        </div>
+                        <div class="section-fields-table">
+                            <!-- 1- Apellidos -->
+                            <div class="row-field">
+                                <div class="field-label-cell">1- Apellidos:</div>
+                                <div class="field-input-cell">
+                                    {{ form.apellido }}
+                                    {% for error in form.apellido.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- 2- Nombres -->
+                            <div class="row-field">
+                                <div class="field-label-cell">2- Nombres:</div>
+                                <div class="field-input-cell">
+                                    {{ form.nombre }}
+                                    {% for error in form.nombre.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 3- Tipo de Documento -->
+                            <div class="row-field">
+                                <div class="field-label-cell">3- Tipo de Documento:</div>
+                                <div class="field-input-cell">
+                                    <div class="horizontal-radio">
+                                        {% for radio in form.tipo_documento %}
+                                            <div class="form-check form-check-inline mb-0 d-flex align-items-center gap-1">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label fw-semibold" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% for error in form.tipo_documento.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 4- Numero de Documento -->
+                            <div class="row-field">
+                                <div class="field-label-cell">4- Numero de Documento:</div>
+                                <div class="field-input-cell">
+                                    {{ form.numero_documento }}
+                                    {% for error in form.numero_documento.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 5- Nacionalidad -->
+                            <div class="row-field">
+                                <div class="field-label-cell">5- Nacionalidad:</div>
+                                <div class="field-input-cell">
+                                    <div class="d-flex align-items-center gap-4 flex-wrap">
+                                        <div class="horizontal-radio">
+                                            {% for radio in form.nacionalidad %}
+                                                <div class="form-check form-check-inline mb-0 d-flex align-items-center gap-1">
+                                                    {{ radio.tag }}
+                                                    <label class="form-check-label fw-semibold" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="nacionalidad-otros-box" style="flex: 1; max-width: 250px;">
+                                            {{ form.nacionalidad_otros }}
+                                        </div>
+                                    </div>
+                                    {% for error in form.nacionalidad.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- II - DIRECCION -->
+                    <div class="section-container">
+                        <div class="section-title-box">
+                            II – DIRECCION
+                        </div>
+                        <div class="section-fields-table">
+                            <!-- 1- Actual -->
+                            <div class="row-field">
+                                <div class="field-label-cell">1- Actual (Barrio y nombre de Calle):</div>
+                                <div class="field-input-cell">
+                                    {{ form.direccion_actual }}
+                                    {% for error in form.direccion_actual.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 2- Ciudad -->
+                            <div class="row-field">
+                                <div class="field-label-cell">2- Ciudad:</div>
+                                <div class="field-input-cell">
+                                    {{ form.ciudad }}
+                                    {% for error in form.ciudad.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 3- Ciudad de Origen -->
+                            <div class="row-field">
+                                <div class="field-label-cell">3- Ciudad de Origen:</div>
+                                <div class="field-input-cell">
+                                    {{ form.ciudad_origen }}
+                                    {% for error in form.ciudad_origen.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 4- Dirección -->
+                            <div class="row-field">
+                                <div class="field-label-cell">4- Dirección:</div>
+                                <div class="field-input-cell">
+                                    {{ form.direccion }}
+                                    {% for error in form.direccion.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 5- Departamento -->
+                            <div class="row-field">
+                                <div class="field-label-cell">5- Departamento:</div>
+                                <div class="field-input-cell">
+                                    {{ form.departamento }}
+                                    {% for error in form.departamento.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- III - NUMEROS DE CONTACTOS -->
+                    <div class="section-container">
+                        <div class="section-title-box">
+                            III – NUMEROS DE CONTACTOS
+                        </div>
+                        <div class="section-fields-table">
+                            <!-- 1- Número de celular -->
+                            <div class="row-field">
+                                <div class="field-label-cell">1- Número de celular:</div>
+                                <div class="field-input-cell">
+                                    {{ form.celular }}
+                                    {% for error in form.celular.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 2- Correo electrónico -->
+                            <div class="row-field">
+                                <div class="field-label-cell">2- Correo electrónico:</div>
+                                <div class="field-input-cell">
+                                    {{ form.email }}
+                                    {% for error in form.email.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 3- Otros números -->
+                            <div class="row-field">
+                                <div class="field-label-cell">3- Otros números:</div>
+                                <div class="field-input-cell">
+                                    {{ form.otros_numeros }}
+                                    {% for error in form.otros_numeros.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IV - DATOS ACADÉMICOS Y SISTEMA -->
+                    <div class="section-container">
+                        <div class="section-title-box">
+                            IV – CONFIGURACIÓN ACADÉMICA
+                        </div>
+                        <div class="section-fields-table">
+                            <!-- 1- Carrera -->
+                            <div class="row-field">
+                                <div class="field-label-cell">1- Carrera:</div>
+                                <div class="field-input-cell text-start">
+                                    {{ form.carreras_id_carrera }}
+                                    {% for error in form.carreras_id_carrera.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 2- Curso -->
+                            <div class="row-field">
+                                <div class="field-label-cell">2- Curso:</div>
+                                <div class="field-input-cell">
+                                    {{ form.curso }}
+                                    {% for error in form.curso.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 3- Número de Matrícula -->
+                            <div class="row-field">
+                                <div class="field-label-cell">3- Número de Matrícula:</div>
+                                <div class="field-input-cell">
+                                    {{ form.numero_matricula }}
+                                    {% for error in form.numero_matricula.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 4- Lector N° -->
+                            <div class="row-field">
+                                <div class="field-label-cell">4- Lector N°:</div>
+                                <div class="field-input-cell">
+                                    {{ form.lector_numero }}
+                                    {% for error in form.lector_numero.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- 5- Estado Activo -->
+                            <div class="row-field">
+                                <div class="field-label-cell">5- Estado Activo:</div>
+                                <div class="field-input-cell">
+                                    <div class="form-check mt-1 d-flex align-items-center gap-2">
+                                        {{ form.estado }}
+                                        <label class="form-check-label fw-semibold" for="{{ form.estado.id_for_label }}">Activo</label>
+                                    </div>
+                                    {% for error in form.estado.errors %}
+                                        <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-3 mt-5">
+                        <a href="{% url 'alumno-list' %}" class="btn btn-light border px-4">Cancelar</a>
+                        <button type="submit" class="btn btn-primary-custom px-5">
+                            <i class="fas fa-save me-2"></i> Guardar Alumno
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TomSelect CSS & JS for searchable Carrera dropdown -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+    /* Styling for Section Headers matching the paper mockup */
+    .section-container {
+        margin-bottom: 30px;
+    }
+    
+    .section-title-box {
+        background-color: #f1f5f9;
+        border: 2px solid #475569;
+        border-radius: 4px 4px 0 0;
+        padding: 8px 15px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #1e293b;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 0px; /* Merges visually with the bordered table under it */
+    }
+    
+    /* Table style container for rows */
+    .section-fields-table {
+        border-left: 2px solid #475569;
+        border-right: 2px solid #475569;
+        border-bottom: 2px solid #475569;
+        border-radius: 0 0 4px 4px;
+        background-color: #ffffff;
+    }
+    
+    .row-field {
+        display: flex;
+        border-bottom: 1px solid #cbd5e1;
+        align-items: center;
+        min-height: 50px;
+    }
+    
+    .row-field:last-child {
+        border-bottom: none;
+    }
+    
+    .field-label-cell {
+        width: 250px;
+        font-weight: 600;
+        color: #334155;
+        font-size: 0.88rem;
+        padding: 10px 15px;
+        border-right: 1px solid #cbd5e1;
+        background-color: #f8fafc;
+        display: flex;
+        align-items: center;
+        align-self: stretch; /* Extends background color across the full row height */
+    }
+    
+    .field-input-cell {
+        flex: 1;
+        padding: 8px 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    /* Input Styling updates */
+    .field-input-cell input[type="text"],
+    .field-input-cell input[type="email"],
+    .field-input-cell input[type="date"],
+    .field-input-cell select {
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+        width: 100%;
+        background-color: #ffffff;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .field-input-cell input[type="text"]:focus,
+    .field-input-cell input[type="email"]:focus,
+    .field-input-cell input[type="date"]:focus,
+    .field-input-cell select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.2rem rgba(0, 78, 162, 0.15);
+        outline: none;
+    }
+    
+    /* TomSelect tweaks to fit the rows cleanly */
+    .ts-wrapper.single .ts-control {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 4px !important;
+        padding: 6px 12px !important;
+        font-size: 0.9rem !important;
+        min-height: 38px !important;
+    }
+    
+    .ts-wrapper.single.focus .ts-control {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 78, 162, 0.15) !important;
+    }
+    
+    /* Horizontal Radios custom layout */
+    .horizontal-radio {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .horizontal-radio .form-check {
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* Custom square checkboxes and radios */
+    .form-check-input[type="checkbox"],
+    .form-check-input[type="radio"] {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px !important; /* Square shape */
+        border: 2px solid #475569 !important;
+        cursor: pointer;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        background-color: #ffffff !important;
+        background-image: none !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 14px 14px !important;
+        transition: all 0.15s ease-in-out;
+        position: relative;
+    }
+
+    .form-check-input[type="checkbox"]:checked,
+    .form-check-input[type="radio"]:checked {
+        background-color: var(--primary) !important;
+        border-color: var(--primary) !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M4 10l4 4 8-8'/%3e%3c/svg%3e") !important;
+    }
+
+    .form-check-label {
+        font-size: 0.95rem;
+        cursor: pointer;
+        user-select: none;
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Update active class on radio option containers
+        function updateRadioBoxes() {
+            const formChecks = document.querySelectorAll('.horizontal-radio .form-check');
+            formChecks.forEach(check => {
+                const radio = check.querySelector('input[type="radio"]');
+                if (radio && radio.checked) {
+                    check.classList.add('checked');
+                } else {
+                    check.classList.remove('checked');
+                }
+            });
+        }
+        
+        // Listen to change events on radios
+        document.querySelectorAll('.horizontal-radio input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', updateRadioBoxes);
+        });
+
+        // Toggle the input field of "Otros" nacionalidad based on selected radio button
+        const nacionalidadRadios = document.querySelectorAll('input[name="nacionalidad"]');
+        const nacionalidadOtros = document.getElementById('id_nacionalidad_otros');
+        
+        if (nacionalidadRadios.length > 0 && nacionalidadOtros) {
+            nacionalidadOtros.placeholder = "Especifique nacionalidad...";
+            
+            function toggleOtros() {
+                const selected = document.querySelector('input[name="nacionalidad"]:checked');
+                if (selected && selected.value === 'Otros') {
+                    nacionalidadOtros.removeAttribute('disabled');
+                    nacionalidadOtros.style.opacity = '1';
+                    nacionalidadOtros.focus();
+                } else {
+                    nacionalidadOtros.setAttribute('disabled', 'true');
+                    nacionalidadOtros.style.opacity = '0.5';
+                    nacionalidadOtros.value = '';
+                }
+            }
+            
+            nacionalidadRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleOtros();
+                    updateRadioBoxes();
+                });
+            });
+            
+            // initial check
+            toggleOtros();
+        }
+
+        // Initial run for boxes classes
+        updateRadioBoxes();
+
+        // Initialize TomSelect on the career selection box
+        const careerSelect = document.querySelector('#id_carreras_id_carrera');
+        if (careerSelect) {
+            const ts = new TomSelect(careerSelect, {
+                create: false,
+                placeholder: "Seleccione una carrera...",
+                allowEmptyOption: false,
+                maxOptions: 100,
+                onItemAdd: function() {
+                    this.setTextboxValue('');
+                    this.refreshOptions(false);
+                },
+                render: {
+                    no_results: function(data, escape) {
+                        return '<div class="p-2 text-muted">No se encontraron coincidencias para "' + escape(data.input) + '"</div>';
+                    }
+                }
+            });
+
+            if (ts && ts.control_input) {
+                ts.control_input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const activeOption = ts.dropdown.querySelector('.active');
+                        if (!activeOption || activeOption.getAttribute('data-value') === '') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,269 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliosoft</title>
+    <link rel="icon" type="image/png" href="{% static 'images/logo_uci.png' %}">
+    <meta name="description" content="Información de contacto de la Biblioteca Dr. Jesús René Haurón Acuña — Universidad Católica Campus Itapúa.">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary:    #004ea2;
+            --primary-dk: #003b7a;
+            --bg:         #f0f4f9;
+            --white:      #ffffff;
+            --text:       #1a2535;
+            --muted:      #6b7280;
+            --border:     #e2e8f0;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Navbar (igual al inicio) ── */
+        .navbar {
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            padding: 0.8rem 0;
+            font-family: 'Outfit', sans-serif;
+        }
+        .navbar .navbar-brand {
+            color: var(--primary) !important;
+        }
+        .navbar .nav-link {
+            color: var(--primary) !important;
+            font-weight: 400;
+            transition: color .18s;
+            padding: 0.5rem 1rem !important;
+        }
+        .navbar .nav-link:hover,
+        .navbar .nav-link.active {
+            color: #38bdf8 !important; /* celeste accent */
+        }
+        .text-warning {
+            color: #38bdf8 !important;
+        }
+        .btn-outline-warning {
+            color: #38bdf8 !important;
+            border-color: #38bdf8 !important;
+            border-width: 2px;
+            font-weight: 400;
+        }
+        .btn-outline-warning:hover {
+            background-color: #38bdf8 !important;
+            color: #ffffff !important;
+        }
+        .navbar-toggler {
+            border: none;
+        }
+        .navbar-toggler-icon {
+            filter: invert(1);
+        }
+
+        /* ── Hero banner ── */
+        .page-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dk) 100%);
+            color: white;
+            padding: 8rem 0 3rem; /* Espaciado extra para el navbar fixed-top */
+            text-align: center;
+        }
+        .page-hero h1 { font-size: 2.2rem; font-weight: 700; }
+        .page-hero p  { opacity: .75; font-size: 1rem; margin-bottom: 0; }
+
+        /* ── Cards ── */
+        .info-card {
+            background: white;
+            border-radius: 14px;
+            padding: 2rem 2.2rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            height: 100%;
+        }
+        .info-card h5 {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1.4rem;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding-bottom: .6rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 1rem;
+        }
+        .info-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(0,78,162,.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: .9rem;
+        }
+        .info-label { font-size: .73rem; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+        .info-value { font-size: .95rem; color: #1a2535; font-weight: 500; }
+        .info-value a { color: var(--primary); text-decoration: none; }
+        .info-value a:hover { text-decoration: underline; }
+
+
+        /* Footer */
+        footer {
+            background-color: var(--primary-dk);
+            color: white;
+            text-align: center;
+            padding: 14px 0;
+            font-size: .8rem;
+            opacity: .9;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════ NAVBAR ═══════ -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-3 d-flex align-items-center gap-2" href="/">
+            <img src="{% static 'images/logo_uci.png' %}" alt="UCI Logo" height="48" class="d-inline-block align-top bg-white p-1 rounded">
+            <span>Biblio<span class="text-warning">soft</span></span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-end align-items-lg-center">
+                <li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#servicios">Servicios</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'catalogo_publico' %}">Catálogo</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{% url 'contacto' %}">Contacto</a></li>
+                <li class="nav-item ms-lg-3 mt-3 mt-lg-0 d-none d-lg-block">
+                    <a class="btn btn-outline-warning rounded-pill px-4" href="{% url 'dashboard' %}">Ingresar</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="page-hero">
+    <div class="container">
+        <div class="mb-3">
+            <span style="background:rgba(255,255,255,.15);border-radius:50px;padding:5px 16px;font-size:.85rem;font-weight:500;">
+                <i class="fas fa-map-marker-alt me-1"></i> Encarnación, Paraguay
+            </span>
+        </div>
+        <h1>Biblioteca <em>"Dr. Jesús René Haurón Acuña"</em></h1>
+        <p>Universidad Católica "Nuestra Señora de la Asunción" — Campus Itapúa</p>
+    </div>
+</section>
+
+<!-- ── Content ── -->
+<main class="flex-grow-1 py-5">
+    <div class="container">
+        <div class="row g-4">
+
+            <!-- Datos institucionales -->
+            <div class="col-lg-6">
+                <div class="info-card">
+                    <h5><i class="fas fa-university me-2"></i> Sede</h5>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-building"></i></div>
+                        <div>
+                            <div class="info-label">Sede</div>
+                            <div class="info-value">Encarnación</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <div class="info-label">Dirección</div>
+                            <div class="info-value">Antequera entre Tomás Romero Pereira y 14 de Mayo</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-mail-bulk"></i></div>
+                        <div>
+                            <div class="info-label">Código Postal</div>
+                            <div class="info-value">6000</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacto -->
+            <div class="col-lg-6">
+                <div class="info-card">
+                    <h5><i class="fas fa-phone-alt me-2"></i> Contacto</h5>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-clock"></i></div>
+                        <div>
+                            <div class="info-label">Horario de Atención</div>
+                            <div class="info-value">Lunes a Viernes<br>07:00 – 21:00 hs.</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-envelope"></i></div>
+                        <div>
+                            <div class="info-label">Correo Electrónico</div>
+                            <div class="info-value">
+                                <a href="mailto:biblioteca.uci@uc.edu.py">biblioteca.uci@uc.edu.py</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fas fa-phone"></i></div>
+                        <div>
+                            <div class="info-label">Teléfono</div>
+                            <div class="info-value">071-20 36 27<br><small class="text-muted">interno 139</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Banner descriptivo -->
+        <div class="mt-5 p-4 rounded-4 text-center" style="background:linear-gradient(135deg,var(--primary),var(--primary-dk));color:white;">
+            <p class="mb-0 fs-5" style="opacity:.9;">Espacio de conocimiento al servicio de la comunidad universitaria de la Universidad Católica "Nuestra Señora de la Asunción" — Campus Itapúa. Gestión bibliotecaria impulsada por <strong>Bibliosoft</strong>.</p>
+        </div>
+    </div>
+</main>
+
+<!-- ── Footer ── -->
+<footer>
+    &copy; 2026 Universidad Católica "Nuestra Señora de la Asunción" — Campus Itapúa |
+    Biblioteca "Dr. Jesús René Haurón Acuña" | Desarrollado por 4to año Ing. Informática
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
