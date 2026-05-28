@@ -293,6 +293,7 @@
 </head>
 <body>
 
+{% if not request.GET.popup %}
 <!-- ═══════ TOP BAR ═══════ -->
 <header class="topbar">
   <div class="container">
@@ -403,9 +404,10 @@
   </div>
 
 </header>
+{% endif %}
 
 <!-- ═══════ MAIN CONTENT ═══════ -->
-<main class="main-content">
+<main class="main-content" {% if request.GET.popup %}style="padding: 1rem 0 2rem;"{% endif %}>
     <div class="container">
         {% if messages %}
             {% for message in messages %}

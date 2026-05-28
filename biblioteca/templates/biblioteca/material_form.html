@@ -71,6 +71,14 @@
                         {% if material.autores_id_autor.all %}
                             <div class="small text-muted"><i class="fas fa-pen-nib me-1 opacity-75"></i> {{ material.autores_id_autor.all|join:", " }}</div>
                         {% endif %}
+                        {% if material.tipo_registro == 'LIBRO' %}
+                            <div class="small text-muted mt-1">
+                                <span class="me-2" title="Cantidad Total (Disponibles)"><i class="fas fa-copy me-1 opacity-75"></i> Cantidad: {{ material.cantidad_total }} ({{ material.cantidad_disponible }} disp.)</span>
+                                {% if material.numero_paginas %}
+                                    <span title="Páginas"><i class="fas fa-file-alt me-1 opacity-75"></i> {{ material.numero_paginas }} págs.</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </td>
                     <td class="text-center">
                         {{ material.año_publicacion|default:"—" }}
@@ -133,7 +141,7 @@
             <a href="{% url 'material-list' %}" class="custom-modal-close" title="Cerrar">&times;</a>
         </div>
         
-        <form method="post" class="needs-validation" novalidate>
+        <form method="post" class="needs-validation custom-modal-form" novalidate>
             {% csrf_token %}
             <div class="custom-modal-body">
                 {% if form.non_field_errors %}
@@ -177,21 +185,35 @@
                         <!-- EDITORIAL -->
                         <div class="col-md-4">
                             <label class="form-label-custom">EDITORIAL <span class="text-asterisk">*</span></label>
-                            {{ form.editoriales_id_editorial }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.editoriales_id_editorial }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'editorial-create' %}" onclick="return openPopup(this.dataset.url, 'editoriales_id_editorial')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Editorial">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.editoriales_id_editorial.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
                         <!-- AUTOR/S -->
-                        <div class="col-md-4">
+                        <div class="col-md-5">
                             <label class="form-label-custom">AUTOR/S <span class="text-asterisk">*</span></label>
-                            {{ form.autores_id_autor }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.autores_id_autor }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'autor-create' %}" onclick="return openPopup(this.dataset.url, 'autores_id_autor')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Autor">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.autores_id_autor.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
                         <!-- NUMERACIÓN DEWEY -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label-custom">NUMERACIÓN DEWEY <span class="text-asterisk">*</span></label>
                             {{ form.numeracion_dewey }}
                             {% for error in form.numeracion_dewey.errors %}
@@ -201,14 +223,6 @@
                     </div>
 
                     <div class="row g-2 mt-2">
-                        <!-- NÚMERO DE ENTRADA -->
-                        <div class="col-md-3">
-                            <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
-                            {{ form.numero_entrada }}
-                            {% for error in form.numero_entrada.errors %}
-                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                            {% endfor %}
-                        </div>
                         <!-- EDICIÓN -->
                         <div class="col-md-3">
                             <label class="form-label-custom">EDICIÓN <span class="text-asterisk">*</span></label>
@@ -233,13 +247,52 @@
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
+                        <!-- NÚMERO DE PÁGINAS -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">NÚMERO DE PÁGINAS</label>
+                            {{ form.numero_paginas }}
+                            {% for error in form.numero_paginas.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <!-- CANTIDAD -->
+                        <div class="col-md-4">
+                            <label class="form-label-custom">CANTIDAD <span class="text-asterisk">*</span></label>
+                            {{ form.cantidad_total }}
+                            {% for error in form.cantidad_total.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- NÚMERO DE ENTRADA -->
+                        <div class="col-md-8">
+                            <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
+                            <div style="display: none;">
+                                {{ form.numero_entrada }}
+                            </div>
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                                <!-- Dynamic inputs will go here -->
+                            </div>
+                            {% for error in form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
                     </div>
 
                     <div class="row g-2 mt-2">
                         <!-- CARRERA/S -->
                         <div class="col-md-6">
                             <label class="form-label-custom">CARRERA/S <span class="text-asterisk">*</span></label>
-                            {{ form.carreras }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.carreras }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'carrera-create' %}" onclick="return openPopup(this.dataset.url, 'carreras')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Carrera">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.carreras.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -247,7 +300,14 @@
                         <!-- GENERO/S -->
                         <div class="col-md-6">
                             <label class="form-label-custom">GENERO/S <span class="text-asterisk">*</span></label>
-                            {{ form.generos }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.generos }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'genero-create' %}" onclick="return openPopup(this.dataset.url, 'generos')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Género">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.generos.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -279,7 +339,14 @@
                         <!-- AUTOR/S -->
                         <div class="col-md-4">
                             <label class="form-label-custom">AUTOR/S <span class="text-asterisk">*</span></label>
-                            {{ form.autores_id_autor }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.autores_id_autor }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'autor-create' %}" onclick="return openPopup(this.dataset.url, 'autores_id_autor')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Autor">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.autores_id_autor.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -287,7 +354,14 @@
                         <!-- CARRERA -->
                         <div class="col-md-4">
                             <label class="form-label-custom">CARRERA <span class="text-asterisk">*</span></label>
-                            {{ form.carreras }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.carreras }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'carrera-create' %}" onclick="return openPopup(this.dataset.url, 'carreras')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Carrera">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.carreras.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -295,7 +369,14 @@
                         <!-- TIPO DE TRABAJO -->
                         <div class="col-md-4">
                             <label class="form-label-custom">TIPO DE TRABAJO <span class="text-asterisk">*</span></label>
-                            {{ form.tipo_trabajo }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.tipo_trabajo }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'tipodocumento-create' %}" onclick="return openPopup(this.dataset.url, 'tipo_trabajo')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Tipo de Trabajo">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.tipo_trabajo.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -314,7 +395,12 @@
                         <!-- NÚMERO DE ENTRADA -->
                         <div class="col-md-3">
                             <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
-                            {{ form.numero_entrada }}
+                            <div style="display: none;">
+                                {{ form.numero_entrada }}
+                            </div>
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                                <!-- Dynamic inputs will go here -->
+                            </div>
                             {% for error in form.numero_entrada.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -362,7 +448,14 @@
                         <!-- TIPO DE MATERIAL -->
                         <div class="col-md-4">
                             <label class="form-label-custom">TIPO DE MATERIAL <span class="text-asterisk">*</span></label>
-                            {{ form.tipo_material }}
+                            <div class="d-flex gap-1 align-items-center">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    {{ form.tipo_material }}
+                                </div>
+                                <button type="button" class="btn btn-light border" data-url="{% url 'tipodocumento-create' %}" onclick="return openPopup(this.dataset.url, 'tipo_material')" style="height: 33px; display: flex; align-items: center; justify-content: center; width: 33px; border-radius: 4px;" title="Agregar Tipo de Material">
+                                    <i class="fas fa-plus text-primary"></i>
+                                </button>
+                            </div>
                             {% for error in form.tipo_material.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -378,7 +471,12 @@
                         <!-- NÚMERO DE ENTRADA -->
                         <div class="col-md-4">
                             <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
-                            {{ form.numero_entrada }}
+                            <div style="display: none;">
+                                {{ form.numero_entrada }}
+                            </div>
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                                <!-- Dynamic inputs will go here -->
+                            </div>
                             {% for error in form.numero_entrada.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
@@ -414,6 +512,19 @@
     </div>
 </div>
 
+<!-- Second Modal Overlay for Inline IFrame Dialogs -->
+<div id="popupModal" class="custom-modal-overlay" style="display: none; z-index: 3000;">
+    <div class="custom-modal-card" style="max-width: 600px; height: 550px; max-height: 90vh; border-radius: 8px; overflow: hidden;">
+        <div class="custom-modal-header" style="background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.5rem; border-bottom: 1px solid #e5e5e5;">
+            <h5 class="custom-modal-title" id="popupModalTitle" style="font-size: 1.1rem; font-weight: 600; color: #333; margin: 0;">Agregar Registro</h5>
+            <button type="button" onclick="closePopupModal()" style="background: none; border: none; font-size: 1.5rem; color: #aaa; font-weight: bold; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        <div class="custom-modal-body" style="padding: 0; overflow: hidden; flex: 1; min-height: 0;">
+            <iframe id="popupIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+
 <style>
     /* Modal overlay styling to cover background */
     .custom-modal-overlay {
@@ -439,9 +550,22 @@
         max-width: 950px;
         display: flex;
         flex-direction: column;
-        max-height: 88vh;
+        max-height: 90vh;
         border: 1px solid rgba(0,0,0,0.15);
         animation: modalFadeIn 0.2s ease-out;
+        overflow: hidden;
+    }
+
+    .custom-modal-form {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+
+    .dynamic-entry-numbers-wrapper {
+        max-width: 280px;
     }
 
     @keyframes modalFadeIn {
@@ -486,6 +610,8 @@
     .custom-modal-body {
         padding: 1.25rem 1.5rem;
         overflow-y: auto;
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .custom-modal-footer {
@@ -657,13 +783,128 @@
 </style>
 
 <script>
+    window.openPopup = function(url, fieldName) {
+        const popupUrl = url + (url.includes('?') ? '&' : '?') + 'popup=1&field_name=' + fieldName;
+        
+        let title = "Agregar Registro";
+        if (fieldName === 'editoriales_id_editorial') title = "Agregar Editorial";
+        else if (fieldName === 'autores_id_autor') title = "Agregar Autor/es";
+        else if (fieldName === 'carreras') title = "Agregar Carrera";
+        else if (fieldName === 'generos') title = "Agregar Género";
+        else if (fieldName === 'tipo_trabajo' || fieldName === 'tipo_material') title = "Agregar Tipo de Documento";
+        
+        const popupModal = document.getElementById('popupModal');
+        const popupTitle = document.getElementById('popupModalTitle');
+        const popupIframe = document.getElementById('popupIframe');
+        
+        if (popupModal && popupTitle && popupIframe) {
+            popupTitle.innerText = title;
+            popupIframe.src = popupUrl;
+            popupModal.style.display = 'flex';
+        }
+        return false;
+    };
+
+    window.closePopupModal = function() {
+        const popupModal = document.getElementById('popupModal');
+        const popupIframe = document.getElementById('popupIframe');
+        if (popupModal) {
+            popupModal.style.display = 'none';
+        }
+        if (popupIframe) {
+            popupIframe.src = '';
+        }
+    };
+
+    window.handlePopupResponse = function(fieldName, pk, repr) {
+        const el = document.getElementById('id_' + fieldName);
+        if (el && el.tomselect) {
+            el.tomselect.addOption({value: pk, text: repr});
+            if (el.hasAttribute('multiple')) {
+                el.tomselect.addItem(pk);
+            } else {
+                el.tomselect.setValue(pk);
+            }
+        }
+    };
+
     document.addEventListener("DOMContentLoaded", function() {
-        // Prevent scroll on number inputs to avoid incrementing/decrementing
+        // Dynamic entry numbers based on quantity
+        const cantidadInput = document.getElementById('id_cantidad_total');
+        const originalInput = document.getElementById('id_numero_entrada');
+        const wrapper = document.querySelector('.dynamic-entry-numbers-wrapper');
+
+        if (originalInput && wrapper) {
+            // Function to save values from inputs back to original input
+            function saveEntryNumbers() {
+                const inputs = wrapper.querySelectorAll('.dynamic-entry-input');
+                const values = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
+                originalInput.value = values.join(', ');
+            }
+
+            // Function to update dynamic fields
+            function updateEntryFields() {
+                const qty = cantidadInput ? (parseInt(cantidadInput.value) || 1) : 1;
+                
+                // Get existing values from inputs first to preserve typed text, fallback to original
+                const inputs = wrapper.querySelectorAll('.dynamic-entry-input');
+                let values = Array.from(inputs).map(inp => inp.value.trim());
+                if (values.length === 0 || values.every(v => v === '')) {
+                    values = originalInput.value.split(/[,/;]/).map(v => v.trim()).filter(v => v !== '');
+                }
+
+                wrapper.innerHTML = '';
+
+                for (let i = 1; i <= qty; i++) {
+                    const containerDiv = document.createElement('div');
+                    containerDiv.className = 'd-flex align-items-center gap-2';
+
+                    const indexSpan = document.createElement('span');
+                    indexSpan.className = 'text-muted small fw-semibold';
+                    indexSpan.style.width = '20px';
+                    indexSpan.innerText = i + '.';
+
+                    const inputEl = document.createElement('input');
+                    inputEl.type = 'text';
+                    inputEl.className = 'form-control dynamic-entry-input';
+                    inputEl.placeholder = 'N° entrada...';
+                    inputEl.value = values[i - 1] || '';
+                    inputEl.required = true;
+
+                    // Apply standard styling to dynamic inputs matching mockup
+                    inputEl.style.borderRadius = '4px';
+                    inputEl.style.border = '1px solid #cccccc';
+                    inputEl.style.padding = '0.4rem 0.6rem';
+                    inputEl.style.fontSize = '0.85rem';
+                    inputEl.style.color = '#495057';
+
+                    inputEl.addEventListener('input', saveEntryNumbers);
+
+                    containerDiv.appendChild(indexSpan);
+                    containerDiv.appendChild(inputEl);
+                    wrapper.appendChild(containerDiv);
+                }
+                saveEntryNumbers();
+            }
+
+            // Remove required attribute from original hidden input to avoid browser validation issues
+            originalInput.removeAttribute('required');
+
+            // Listen to quantity changes
+            if (cantidadInput) {
+                cantidadInput.addEventListener('input', updateEntryFields);
+            }
+
+            // Initialize fields
+            updateEntryFields();
+        }
+
+        // Blur number inputs on scroll to prevent incrementing/decrementing without blocking page scroll
         document.addEventListener('wheel', function(e) {
             if (document.activeElement && document.activeElement.type === 'number') {
-                e.preventDefault();
+                document.activeElement.blur();
             }
-        }, { passive: false });
+        });
 
         const selectors = [
             '#id_editoriales_id_editorial',

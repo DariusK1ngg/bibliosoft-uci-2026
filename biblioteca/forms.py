@@ -46,20 +46,74 @@ class LibroForm(BootstrapModelForm):
         required_fields = [
             'año_publicacion', 'titulo', 'numeracion_dewey',
             'editoriales_id_editorial', 'numero_entrada', 'estado_material',
-            'fecha_ingreso', 'autores_id_autor', 'carreras', 'generos', 'edicion'
+            'fecha_ingreso', 'autores_id_autor', 'carreras', 'generos', 'edicion',
+            'cantidad_total'
         ]
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
 
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad_total = cleaned_data.get('cantidad_total')
+        numero_entrada = cleaned_data.get('numero_entrada')
 
+        if cantidad_total is not None and numero_entrada:
+            import re
+            def parse_entry_numbers(val):
+                if not val:
+                    return []
+                parts = re.split(r'[,/;]', val)
+                parts = [p.strip() for p in parts if p.strip()]
+                return parts
+
+            def count_entry_numbers(val):
+                parts = parse_entry_numbers(val)
+                total_count = 0
+                for part in parts:
+                    match = re.match(r'^(\d+)\s*-\s*(\d+)$', part)
+                    if match:
+                        start = int(match.group(1))
+                        end = int(match.group(2))
+                        if end >= start:
+                            total_count += (end - start + 1)
+                        else:
+                            total_count += 1
+                    else:
+                        total_count += 1
+                return total_count
+
+            count = count_entry_numbers(numero_entrada)
+            if cantidad_total > 1:
+                if count > cantidad_total:
+                    self.add_error('numero_entrada', f"El número de entradas ingresadas ({count}) supera la cantidad máxima de libros ({cantidad_total}).")
+            else:
+                if count > 1:
+                    self.add_error('numero_entrada', f"Solo se permite 1 número de entrada cuando la cantidad de libros es 1.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if not self.instance.pk:
+            instance.cantidad_disponible = instance.cantidad_total
+        else:
+            original = Material.objects.get(pk=self.instance.pk)
+            diff = instance.cantidad_total - original.cantidad_total
+            instance.cantidad_disponible = max(0, original.cantidad_disponible + diff)
+        
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
     class Meta:
         model = Material
         fields = [
             'isbn', 'año_publicacion', 'titulo', 'numeracion_dewey',
             'editoriales_id_editorial', 'numero_entrada', 'estado_material',
-            'fecha_ingreso', 'autores_id_autor', 'carreras', 'generos', 'edicion'
+            'fecha_ingreso', 'autores_id_autor', 'carreras', 'generos', 'edicion',
+            'cantidad_total', 'numero_paginas'
         ]
         widgets = {
             'fecha_ingreso': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
@@ -77,6 +131,8 @@ class LibroForm(BootstrapModelForm):
             'carreras': 'Carrera/s',
             'generos': 'Género/s',
             'edicion': 'Edición',
+            'cantidad_total': 'Cantidad',
+            'numero_paginas': 'Número de Páginas',
         }
 
 class TrabajoInvestigacionForm(BootstrapModelForm):

@@ -71,6 +71,14 @@
                         {% if material.autores_id_autor.all %}
                             <div class="small text-muted"><i class="fas fa-pen-nib me-1 opacity-75"></i> {{ material.autores_id_autor.all|join:", " }}</div>
                         {% endif %}
+                        {% if material.tipo_registro == 'LIBRO' %}
+                            <div class="small text-muted mt-1">
+                                <span class="me-2" title="Cantidad Total (Disponibles)"><i class="fas fa-copy me-1 opacity-75"></i> Cantidad: {{ material.cantidad_total }} ({{ material.cantidad_disponible }} disp.)</span>
+                                {% if material.numero_paginas %}
+                                    <span title="Páginas"><i class="fas fa-file-alt me-1 opacity-75"></i> {{ material.numero_paginas }} págs.</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </td>
                     <td class="text-center">
                         {{ material.año_publicacion|default:"—" }}

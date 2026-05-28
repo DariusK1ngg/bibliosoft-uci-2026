@@ -186,6 +186,7 @@ class Material(models.Model):
     estado_material = models.CharField(max_length=50, default='DISPONIBLE', verbose_name='Estado')
     fecha_ingreso = models.DateField(null=True, blank=True, verbose_name='Fecha de Ingreso')
     edicion = models.CharField(max_length=50, null=True, blank=True, verbose_name='Edición')
+    numero_paginas = models.IntegerField(null=True, blank=True, verbose_name='Número de Páginas')
     descripcion = models.TextField(null=True, blank=True, verbose_name='Descripción')
     titulo_grado = models.CharField(max_length=100, null=True, blank=True, verbose_name='Título de Grado')
     tipo_trabajo = models.CharField(max_length=100, null=True, blank=True, verbose_name='Tipo de Trabajo')

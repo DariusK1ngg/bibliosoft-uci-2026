@@ -370,6 +370,37 @@ class BaseCatalogCreateView(LoginRequiredMixin, CreateView):
         context['cancel_url'] = self.success_url
         return context
 
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.GET.get('popup') == '1' or self.request.POST.get('popup') == '1':
+            field_name = self.request.GET.get('field_name') or self.request.POST.get('field_name') or ''
+            obj_pk = self.object.pk
+            obj_repr = getattr(self.object, 'descripcion', str(self.object))
+            from django.http import HttpResponse
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Guardado</title>
+            </head>
+            <body>
+                <script>
+                    const parentWin = window.opener || (window.parent !== window ? window.parent : null);
+                    if (parentWin) {{
+                        parentWin.handlePopupResponse("{field_name}", "{obj_pk}", "{obj_repr}");
+                    }}
+                    if (window.opener) {{
+                        window.close();
+                    }} else if (parentWin && parentWin.closePopupModal) {{
+                        parentWin.closePopupModal();
+                    }}
+                </script>
+            </body>
+            </html>
+            """
+            return HttpResponse(html)
+        return super().form_valid(form)
+
 class BaseCatalogUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'biblioteca/generic_form.html'
 

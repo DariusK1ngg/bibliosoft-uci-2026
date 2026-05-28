@@ -2,13 +2,15 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-7 col-md-9">
+    <div class="{% if request.GET.popup %}col-12{% else %}col-lg-7 col-md-9{% endif %}">
+        {% if not request.GET.popup %}
         <div class="page-title-area mb-4">
             <div>
                 <h1 class="page-title">{{ title }}</h1>
                 <p class="page-subtitle">{{ subtitle }}</p>
             </div>
         </div>
+        {% endif %}
 
         <div class="card-custom">
             <div class="card-body p-4 p-md-5">
@@ -23,6 +25,15 @@
                             {% if field.field.widget.input_type == 'checkbox' %}
                                 <div class="form-check form-switch mt-2">
                                     {{ field }}
+                                </div>
+                            {% elif field.name == 'facultades_id_facultad' %}
+                                <div class="d-flex gap-1 align-items-center">
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        {{ field }}
+                                    </div>
+                                    <button type="button" class="btn btn-light border" data-url="{% url 'facultad-create' %}" onclick="return openPopup(this.dataset.url, 'facultades_id_facultad')" style="height: 38px; display: flex; align-items: center; justify-content: center; width: 38px; border-radius: 6px;" title="Agregar Facultad">
+                                        <i class="fas fa-plus text-primary"></i>
+                                    </button>
                                 </div>
                             {% else %}
                                 {{ field }}
@@ -41,7 +52,11 @@
                     <hr class="my-5 opacity-25">
                     
                     <div class="d-flex justify-content-end gap-3">
-                        <a href="{{ cancel_url }}" class="btn btn-light border px-4">Cancelar</a>
+                        {% if request.GET.popup %}
+                            <button type="button" class="btn btn-light border px-4" onclick="if(window.opener){window.close();}else if(window.parent && window.parent.closePopupModal){window.parent.closePopupModal();}">Cancelar</button>
+                        {% else %}
+                            <a href="{{ cancel_url }}" class="btn btn-light border px-4">Cancelar</a>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary-custom px-5">
                             <i class="fas fa-save me-2"></i> Guardar Registro
                         </button>
@@ -92,9 +107,82 @@
         color: #999;
         font-size: 0.875rem;
     }
+
+    /* Modal overlay styling to cover background inside iframe */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 3000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .custom-modal-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(0,0,0,0.15);
+    }
+    .custom-modal-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
 </style>
 
+<!-- Second Modal Overlay for Inline IFrame Dialogs inside generic form -->
+<div id="popupModal" class="custom-modal-overlay" style="display: none; z-index: 3000;">
+    <div class="custom-modal-card" style="max-width: 600px; height: 400px; max-height: 90vh; border-radius: 8px; overflow: hidden;">
+        <div class="custom-modal-header" style="background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.5rem; border-bottom: 1px solid #e5e5e5;">
+            <h5 class="custom-modal-title" id="popupModalTitle">Agregar Facultad</h5>
+            <button type="button" onclick="closePopupModal()" style="background: none; border: none; font-size: 1.5rem; color: #aaa; font-weight: bold; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        <div class="custom-modal-body" style="padding: 0; overflow: hidden; flex: 1; min-height: 0;">
+            <iframe id="popupIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+
 <script>
+    window.openPopup = function(url, fieldName) {
+        const popupUrl = url + (url.includes('?') ? '&' : '?') + 'popup=1&field_name=' + fieldName;
+        const popupModal = document.getElementById('popupModal');
+        const popupIframe = document.getElementById('popupIframe');
+        if (popupModal && popupIframe) {
+            popupIframe.src = popupUrl;
+            popupModal.style.display = 'flex';
+        }
+        return false;
+    };
+
+    window.closePopupModal = function() {
+        const popupModal = document.getElementById('popupModal');
+        const popupIframe = document.getElementById('popupIframe');
+        if (popupModal) {
+            popupModal.style.display = 'none';
+        }
+        if (popupIframe) {
+            popupIframe.src = '';
+        }
+    };
+
+    window.handlePopupResponse = function(fieldName, pk, repr) {
+        const el = document.getElementById('id_' + fieldName);
+        if (el && el.tomselect) {
+            el.tomselect.addOption({value: pk, text: repr});
+            el.tomselect.setValue(pk);
+        }
+    };
+
     document.addEventListener("DOMContentLoaded", function() {
         const selectEl = document.querySelector('#id_facultades_id_facultad');
         if (selectEl) {
