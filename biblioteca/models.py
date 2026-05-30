@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-
+from django.utils import timezone
 # 1. Parámetros Base
 class Autor(models.Model):
     id_autor = models.AutoField(primary_key=True)
@@ -205,6 +205,48 @@ class Material(models.Model):
         return self.prestamo_set.exists()
 
     @property
+    def lista_numeros_entrada(self):
+        import re
+        if not self.numero_entrada:
+            return []
+        parts = re.split(r'[,/;]', self.numero_entrada)
+        parts = [p.strip() for p in parts if p.strip()]
+        numeros = []
+        for part in parts:
+            match = re.match(r'^(\d+)\s*-\s*(\d+)$', part)
+            if match:
+                start = int(match.group(1))
+                end = int(match.group(2))
+                if end >= start:
+                    numeros.extend([str(i) for i in range(start, end + 1)])
+                else:
+                    numeros.append(part)
+            else:
+                numeros.append(part)
+        return numeros
+
+    def numeros_entrada_disponibles(self, exclude_prestamo_id=None):
+        todos = self.lista_numeros_entrada
+        if not todos:
+            return []
+        # Import dynamically to avoid circular import
+        from .models import Prestamo
+        query = Prestamo.objects.filter(MATERIALES_id_material=self, estado__in=['ACTIVO', 'VENCIDO'])
+        if exclude_prestamo_id:
+            query = query.exclude(pk=exclude_prestamo_id)
+        
+        # We clean the list by getting non-empty values
+        prestados = query.exclude(numero_entrada__isnull=True).exclude(numero_entrada='').values_list('numero_entrada', flat=True)
+        # In case a loan contains multiple entry numbers separated by commas
+        prestados_sets = set()
+        for p in prestados:
+            for item in [x.strip() for x in p.split(',') if x.strip()]:
+                prestados_sets.add(item)
+                
+        disponibles = [n for n in todos if n not in prestados_sets]
+        return disponibles
+
+    @property
     def tipo_documento(self):
         return self.tipodocumento_id_tipo
 
@@ -252,9 +294,14 @@ class Prestamo(models.Model):
     ALUMNOS_id_alumno = models.ForeignKey(Alumno, on_delete=models.PROTECT, db_column='ALUMNOS_id_alumno', verbose_name='Alumno')
     MATERIALES_id_material = models.ForeignKey(Material, on_delete=models.PROTECT, db_column='MATERIALES_id_material', verbose_name='Material')
     administrador_usuariosbibliosoft_id = models.ForeignKey(User, on_delete=models.PROTECT, db_column='administrador_usuariosbibliosoft_id', verbose_name='Usuario que presta')
-    fecha_prestamo = models.DateField(auto_now_add=True, verbose_name='Fecha de Préstamo')
+    fecha_prestamo = models.DateField(default=timezone.now, verbose_name='Fecha de Préstamo')
     fecha_vencimiento = models.DateField(verbose_name='Fecha de Vencimiento')
     estado = models.CharField(max_length=20, choices=ESTADOS, default='ACTIVO', verbose_name='Estado')
+    
+    # Nuevos campos
+    cantidad = models.IntegerField(default=1, verbose_name='Cantidad prestada')
+    numero_entrada = models.CharField(max_length=100, blank=True, null=True, verbose_name='Número de entrada')
+    prorrogado = models.BooleanField(default=False, verbose_name='Prorrogado')
 
     class Meta:
         verbose_name = 'Préstamo'
@@ -273,22 +320,22 @@ class Prestamo(models.Model):
 
         if is_new:
             # Validar disponibilidad
-            if self.MATERIALES_id_material.cantidad_disponible <= 0:
-                raise ValidationError("No hay stock disponible para este material.")
+            if self.MATERIALES_id_material.cantidad_disponible < self.cantidad:
+                raise ValidationError("No hay stock disponible suficiente para este material.")
             # Decrementar cantidad disponible
-            self.MATERIALES_id_material.cantidad_disponible -= 1
+            self.MATERIALES_id_material.cantidad_disponible -= self.cantidad
             self.MATERIALES_id_material.save()
         else:
-            # Handle case where material was changed during edit
+            # Handle case where material or quantity was changed during edit
             orig = Prestamo.objects.get(pk=self.pk)
-            if orig.MATERIALES_id_material != self.MATERIALES_id_material:
+            if orig.MATERIALES_id_material != self.MATERIALES_id_material or orig.cantidad != self.cantidad:
                 # Return stock to the previous material
-                orig.MATERIALES_id_material.cantidad_disponible += 1
+                orig.MATERIALES_id_material.cantidad_disponible += orig.cantidad
                 orig.MATERIALES_id_material.save()
                 # Deduct stock from the new material
-                if self.MATERIALES_id_material.cantidad_disponible <= 0:
-                    raise ValidationError("No hay stock disponible para este material.")
-                self.MATERIALES_id_material.cantidad_disponible -= 1
+                if self.MATERIALES_id_material.cantidad_disponible < self.cantidad:
+                    raise ValidationError("No hay stock disponible suficiente para este material.")
+                self.MATERIALES_id_material.cantidad_disponible -= self.cantidad
                 self.MATERIALES_id_material.save()
 
         super().save(*args, **kwargs)
@@ -326,18 +373,40 @@ class Devolucion(models.Model):
             # Calcular multa automáticamente
             from django.utils import timezone
             prestamo = self.prestamos_id_prestamo
-            if prestamo.fecha_vencimiento < timezone.now().date():
+            config = ConfiguracionGeneral.get_solo()
+            if config.recargo_activo and prestamo.fecha_vencimiento < timezone.now().date():
                 dias_retraso = (timezone.now().date() - prestamo.fecha_vencimiento).days
-                self.multa = dias_retraso * 1500
+                self.multa = dias_retraso * config.monto_recargo
             else:
                 self.multa = 0
                 self.pago_multa = False  # Si no hay multa, se guarda por defecto falso/no aplica
 
         super().save(*args, **kwargs)
         if is_new:
-            # Lógica requerida: Sumar 1 a la cantidad disponible y cambiar estado a 'DEVUELTO'
+            # Lógica requerida: Sumar la cantidad del préstamo a la cantidad disponible y cambiar estado a 'DEVUELTO'
             self.prestamos_id_prestamo.estado = 'DEVUELTO'
             self.prestamos_id_prestamo.save()
             
-            self.prestamos_id_prestamo.MATERIALES_id_material.cantidad_disponible += 1
+            self.prestamos_id_prestamo.MATERIALES_id_material.cantidad_disponible += self.prestamos_id_prestamo.cantidad
             self.prestamos_id_prestamo.MATERIALES_id_material.save()
+
+
+class ConfiguracionGeneral(models.Model):
+    monto_recargo = models.DecimalField(max_digits=8, decimal_places=0, default=1500, verbose_name='Monto del recargo por día')
+    recargo_activo = models.BooleanField(default=True, verbose_name='¿Recargo activo?')
+    horario_lunes_viernes = models.CharField(max_length=100, default='07:00 a 21:00 hs.', verbose_name='Horario de atención Lunes a Viernes')
+    abren_sabados = models.BooleanField(default=True, verbose_name='¿Abren los Sábados?')
+    horario_sabados = models.CharField(max_length=100, default='08:00 a 12:00 hs.', verbose_name='Horario de atención Sábados')
+
+    class Meta:
+        verbose_name = 'Configuración General'
+        verbose_name_plural = 'Configuraciones Generales'
+
+    def __str__(self):
+        return "Configuración General"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+

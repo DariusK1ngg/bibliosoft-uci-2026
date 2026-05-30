@@ -1,25 +1,29 @@
 from django.shortcuts import render
 from django.db.models import Q
-from biblioteca.models import Material, Categoria, Autor, TipoDocumento
+from biblioteca.models import Material, Genero, Autor, Carrera, Facultad, Editorial, ConfiguracionGeneral
 
 def index(request):
-    return render(request, 'landing/index.html')
+    config = ConfiguracionGeneral.get_solo()
+    return render(request, 'landing/index.html', {'config': config})
 
 def contacto(request):
-    return render(request, 'landing/contacto.html')
+    config = ConfiguracionGeneral.get_solo()
+    return render(request, 'landing/contacto.html', {'config': config})
 
 def catalogo(request):
     query = request.GET.get('q', '')
-    categoria_id = request.GET.get('categoria', '')
+    genero_id = request.GET.get('genero', '')
     autor_id = request.GET.get('autor', '')
-    tipo_id = request.GET.get('tipo', '')
+    carrera_id = request.GET.get('carrera', '')
+    facultad_id = request.GET.get('facultad', '')
+    editorial_id = request.GET.get('editorial', '')
     solo_disponibles = request.GET.get('disponible', '')
 
     materiales = Material.objects.all().select_related(
         'editoriales_id_editorial',
         'categorias_id_categoria',
         'tipodocumento_id_tipo'
-    ).prefetch_related('autores_id_autor')
+    ).prefetch_related('autores_id_autor', 'generos', 'carreras')
 
     if query:
         materiales = materiales.filter(
@@ -30,32 +34,50 @@ def catalogo(request):
             Q(editoriales_id_editorial__nombre__icontains=query)
         )
 
-    if categoria_id:
-        materiales = materiales.filter(categorias_id_categoria=categoria_id)
+    if genero_id:
+        materiales = materiales.filter(generos=genero_id)
 
     if autor_id:
         materiales = materiales.filter(autores_id_autor=autor_id)
 
-    if tipo_id:
-        materiales = materiales.filter(tipodocumento_id_tipo=tipo_id)
+    if carrera_id:
+        materiales = materiales.filter(carreras=carrera_id)
+
+    if facultad_id:
+        materiales = materiales.filter(carreras__facultades_id_facultad=facultad_id)
+
+    if editorial_id:
+        materiales = materiales.filter(editoriales_id_editorial=editorial_id)
 
     if solo_disponibles == '1':
         materiales = materiales.filter(cantidad_disponible__gt=0)
 
     # Fetch choices for filtering dropdowns
-    categorias = Categoria.objects.all()
+    generos = Genero.objects.all()
     autores = Autor.objects.all()
-    tipos = TipoDocumento.objects.all()
+    facultades = Facultad.objects.all()
+    editoriales = Editorial.objects.all()
+
+    if facultad_id:
+        carreras = Carrera.objects.filter(facultades_id_facultad=facultad_id)
+        if carrera_id and not carreras.filter(id_carrera=carrera_id).exists():
+            carrera_id = ''
+    else:
+        carreras = Carrera.objects.all()
 
     context = {
-        'materiales': materiales,
-        'categorias': categorias,
+        'materiales': materiales.distinct(),
+        'generos': generos,
         'autores': autores,
-        'tipos': tipos,
+        'carreras': carreras,
+        'facultades': facultades,
+        'editoriales': editoriales,
         'query': query,
-        'selected_categoria': int(categoria_id) if categoria_id.isdigit() else None,
+        'selected_genero': int(genero_id) if genero_id.isdigit() else None,
         'selected_autor': int(autor_id) if autor_id.isdigit() else None,
-        'selected_tipo': int(tipo_id) if tipo_id.isdigit() else None,
+        'selected_carrera': int(carrera_id) if carrera_id and carrera_id.isdigit() else None,
+        'selected_facultad': int(facultad_id) if facultad_id.isdigit() else None,
+        'selected_editorial': int(editorial_id) if editorial_id.isdigit() else None,
         'solo_disponibles': solo_disponibles == '1',
     }
     return render(request, 'landing/catalogo.html', context)

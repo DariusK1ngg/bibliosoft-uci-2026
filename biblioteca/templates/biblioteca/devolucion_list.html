@@ -1,0 +1,103 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="page-title-area">
+    <div>
+        <h1 class="page-title">Historial de Devoluciones</h1>
+        <p class="page-subtitle">Registro y control de materiales devueltos a la biblioteca</p>
+    </div>
+    <a href="{% url 'devolucion-create' %}" class="btn btn-primary-custom d-flex align-items-center gap-2">
+        <i class="fas fa-undo"></i> Registrar Devolución
+    </a>
+</div>
+
+<div class="card-custom">
+    <div class="card-header-custom d-flex justify-content-between align-items-center bg-white flex-wrap gap-2">
+        <h5 class="mb-0 text-dark fw-bold">Listado de Retornos</h5>
+        
+        <!-- Search form -->
+        <form action="{% url 'devolucion-list' %}" method="get" class="d-flex" style="max-width: 300px; width: 100%;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar devolución...">
+                <button type="submit" class="btn btn-secondary d-none">Buscar</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th class="text-center" width="8%">ID</th>
+                    <th class="text-center" width="8%">PRÉSTAMO</th>
+                    <th width="20%">ALUMNO</th>
+                    <th width="25%">MATERIAL</th>
+                    <th class="text-center" width="12%">FECHA DEV.</th>
+                    <th class="text-center" width="10%">ESTADO MAT.</th>
+                    {% if recargo_activo %}
+                    <th class="text-center" width="12%">MULTA</th>
+                    {% endif %}
+                    <th width="15%">OBSERVACIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dev in devoluciones %}
+                <tr>
+                    <td class="text-center text-muted fw-semibold">#{{ dev.id_devolucion }}</td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark border">#{{ dev.prestamos_id_prestamo.id_prestamo }}</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ dev.prestamos_id_prestamo.ALUMNOS_id_alumno.nombre }} {{ dev.prestamos_id_prestamo.ALUMNOS_id_alumno.apellido }}</div>
+                        <div class="small text-muted"><i class="fas fa-id-card me-1 opacity-75"></i> {{ dev.prestamos_id_prestamo.ALUMNOS_id_alumno.matricula }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-medium text-dark"><i class="fas fa-book me-1 text-primary opacity-75"></i> {{ dev.prestamos_id_prestamo.MATERIALES_id_material.titulo }}</div>
+                        {% if dev.prestamos_id_prestamo.numero_entrada %}
+                        <div class="small text-muted"><i class="fas fa-barcode me-1 opacity-75"></i> Entrada: {{ dev.prestamos_id_prestamo.numero_entrada }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="text-dark fw-medium">{{ dev.fecha_devolucion|date:"d/m/Y" }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if dev.estado_material == 'BUENO' %}
+                            <span class="badge badge-custom badge-soft-success">Bueno</span>
+                        {% elif dev.estado_material == 'REGULAR' %}
+                            <span class="badge badge-custom badge-soft-warning">Regular</span>
+                        {% else %}
+                            <span class="badge badge-custom badge-soft-danger">Malo</span>
+                        {% endif %}
+                    </td>
+                    {% if recargo_activo %}
+                    <td class="text-center">
+                        {% if dev.multa > 0 %}
+                            <div class="fw-bold text-danger">{{ dev.multa }} Gs</div>
+                            {% if dev.pago_multa %}
+                                <span class="badge badge-custom badge-soft-success" style="font-size: 0.65rem;"><i class="fas fa-check-circle"></i> Pagado</span>
+                            {% else %}
+                                <span class="badge badge-custom badge-soft-danger" style="font-size: 0.65rem;"><i class="fas fa-times-circle"></i> Pendiente</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted small">Sin multa</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td>
+                        <span class="text-muted small" title="{{ dev.observaciones }}">{{ dev.observaciones|default:"—"|truncatechars:40 }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if recargo_activo %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+                        <p class="mb-0">No hay registros de devoluciones.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

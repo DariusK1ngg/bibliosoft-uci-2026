@@ -111,19 +111,29 @@
                         </span>
                     </td>
                     <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                            <a href="{% url 'material-update' material.id_material %}" class="btn btn-sm btn-light border text-primary" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            {% if material.tiene_prestamos %}
-                                <button class="btn btn-sm btn-light border text-muted" title="No se puede eliminar: tiene préstamos asociados" style="cursor: not-allowed; opacity: 0.6;" disabled>
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            {% else %}
-                                <a href="{% url 'material-delete' material.id_material %}" class="btn btn-sm btn-light border text-danger" title="Borrar">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                            {% endif %}
+                        <div class="dropdown position-static">
+                            <button class="btn btn-sm btn-light border" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="padding: 0.25rem 0.5rem;" title="Acciones">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item text-primary" href="{% url 'material-update' material.id_material %}">
+                                        <i class="fas fa-edit me-2"></i> Editar
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    {% if material.tiene_prestamos %}
+                                        <button class="dropdown-item text-muted disabled w-100 text-start border-0 bg-transparent" title="No se puede eliminar: tiene préstamos asociados" style="cursor: not-allowed; opacity: 0.6;" disabled>
+                                            <i class="fas fa-trash me-2"></i> Eliminar (No permitido)
+                                        </button>
+                                    {% else %}
+                                        <a class="dropdown-item text-danger" href="{% url 'material-delete' material.id_material %}">
+                                            <i class="fas fa-trash me-2"></i> Eliminar
+                                        </a>
+                                    {% endif %}
+                                </li>
+                            </ul>
                         </div>
                     </td>
                 </tr>

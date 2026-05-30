@@ -14,11 +14,13 @@ from .views import (
     FacultadListView, FacultadCreateView, FacultadUpdateView, FacultadDeleteView,
     CarreraListView, CarreraCreateView, CarreraUpdateView, CarreraDeleteView,
     DevolucionListView, DevolucionCreateView,
-    ReportesView, ReportePrintView
+    ReportesView, ReportePrintView,
+    ConfiguracionGeneralUpdateView
 )
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='dashboard'),
+    path('configuracion/', ConfiguracionGeneralUpdateView.as_view(), name='configuracion-general'),
     
     # Materiales
     path('materiales/', MaterialListView.as_view(), name='material-list'),

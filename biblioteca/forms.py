@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion
+    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral
 )
 
 class BootstrapModelForm(forms.ModelForm):
@@ -346,13 +346,16 @@ class AlumnoForm(BootstrapModelForm):
 
 class AlumnoModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"{obj.nombre} {obj.apellido} ({obj.matricula})"
+        cedula = obj.numero_documento or obj.matricula or ""
+        return f"{obj.nombre} {obj.apellido} (Cédula: {cedula}) - Carrera: {obj.carreras_id_carrera.nombre}"
 
 class MaterialModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         autores = obj.autores_id_autor.all()
         autor_desc = ", ".join([a.descripcion for a in autores]) if autores.exists() else "Sin autor"
-        return f"{obj.titulo} (Autor: {autor_desc}) - Disponible: {obj.cantidad_disponible}"
+        isbn_str = f" | ISBN: {obj.isbn}" if obj.isbn else ""
+        entrada_str = f" | N° Entrada: {obj.numero_entrada}" if obj.numero_entrada else ""
+        return f"{obj.titulo} (Autor: {autor_desc}{isbn_str}{entrada_str}) - Disp: {obj.cantidad_disponible}"
 
 class PrestamoForm(BootstrapModelForm):
     ALUMNOS_id_alumno = AlumnoModelChoiceField(
@@ -363,28 +366,95 @@ class PrestamoForm(BootstrapModelForm):
         queryset=Material.objects.none(),
         label='Material'
     )
+    cantidad = forms.IntegerField(
+        min_value=1,
+        initial=1,
+        label='Cantidad a prestar'
+    )
+    numero_entrada = forms.MultipleChoiceField(
+        required=False,
+        label='Número de Entrada',
+        widget=forms.SelectMultiple(attrs={'class': 'form-select'})
+    )
 
     class Meta:
         model = Prestamo
-        fields = ['ALUMNOS_id_alumno', 'MATERIALES_id_material']
+        fields = ['ALUMNOS_id_alumno', 'MATERIALES_id_material', 'cantidad', 'numero_entrada']
 
     def __init__(self, *args, **kwargs):
         from django.db.models import Q
         super().__init__(*args, **kwargs)
         self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(estado=True)
+        
+        # Populate choices dynamically from POST data if bound
+        if self.is_bound:
+            material_id = self.data.get('MATERIALES_id_material')
+            if material_id:
+                try:
+                    m = Material.objects.get(pk=material_id)
+                    self.fields['numero_entrada'].choices = [(n, n) for n in m.lista_numeros_entrada]
+                except Material.DoesNotExist:
+                    pass
+                    
         if self.instance and self.instance.pk:
             self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(
                 Q(cantidad_disponible__gt=0) | Q(pk=self.instance.MATERIALES_id_material.pk)
             )
+            m = self.instance.MATERIALES_id_material
+            disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
+            current_ne = self.instance.numero_entrada
+            current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+            
+            choices = []
+            for c_ne in current_nes:
+                choices.append((c_ne, c_ne))
+            for n in disponibles:
+                if n not in current_nes:
+                    choices.append((n, n))
+            
+            self.fields['numero_entrada'].choices = choices
+            self.initial['numero_entrada'] = current_nes
         else:
-            self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(cantidad_disponible__gt=0)
+            if not self.is_bound:
+                self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(cantidad_disponible__gt=0)
+                self.fields['numero_entrada'].choices = []
 
-    def clean_MATERIALES_id_material(self):
-        material = self.cleaned_data.get('MATERIALES_id_material')
-        if not self.instance.pk:
-            if material and material.cantidad_disponible <= 0:
-                raise forms.ValidationError("No hay stock disponible para este material.")
-        return material
+    def clean(self):
+        cleaned_data = super().clean()
+        material = cleaned_data.get('MATERIALES_id_material')
+        cantidad = cleaned_data.get('cantidad')
+        ne_list = cleaned_data.get('numero_entrada')
+
+        if material:
+            disp = material.cantidad_disponible
+            if self.instance and self.instance.pk:
+                if self.instance.MATERIALES_id_material == material:
+                    disp += self.instance.cantidad
+
+            if cantidad and cantidad > disp:
+                self.add_error('cantidad', f"No hay stock suficiente. Máximo disponible: {disp}.")
+
+            total_numeros = material.lista_numeros_entrada
+            if total_numeros:
+                if not ne_list:
+                    self.add_error('numero_entrada', "Este material requiere seleccionar al menos un número de entrada.")
+                else:
+                    if cantidad and len(ne_list) != cantidad:
+                        self.add_error('numero_entrada', f"Debe seleccionar exactamente {cantidad} número(s) de entrada para la cantidad ingresada.")
+                    
+                    disponibles = material.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
+                    current_ne = getattr(self.instance, 'numero_entrada', None)
+                    current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+                    
+                    for ne in ne_list:
+                        if ne not in disponibles and ne not in current_nes:
+                            self.add_error('numero_entrada', f"El número de entrada '{ne}' ya se encuentra prestado o no existe.")
+                            
+        # Convert list to comma-separated string for saving to CharField
+        if isinstance(ne_list, list):
+            cleaned_data['numero_entrada'] = ", ".join(ne_list)
+            
+        return cleaned_data
 
 class UserProfileForm(BootstrapModelForm):
     class Meta:
@@ -492,7 +562,9 @@ class CarreraForm(BootstrapModelForm):
 
 class PrestamoModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"Préstamo #{obj.id_prestamo} - {obj.ALUMNOS_id_alumno.nombre} {obj.ALUMNOS_id_alumno.apellido} — {obj.MATERIALES_id_material.titulo} (Vence: {obj.fecha_vencimiento.strftime('%d/%m/%Y')})"
+        cedula = obj.ALUMNOS_id_alumno.numero_documento or obj.ALUMNOS_id_alumno.matricula or ""
+        entrada_str = f" [N° Entrada: {obj.numero_entrada}]" if obj.numero_entrada else ""
+        return f"Préstamo #{obj.id_prestamo} - Alumno: {obj.ALUMNOS_id_alumno.nombre} {obj.ALUMNOS_id_alumno.apellido} (Cédula: {cedula}) — Material: {obj.MATERIALES_id_material.titulo}{entrada_str} (Vence: {obj.fecha_vencimiento.strftime('%d/%m/%Y')})"
 
 class DevolucionForm(BootstrapModelForm):
     prestamos_id_prestamo = PrestamoModelChoiceField(
@@ -525,4 +597,21 @@ class DevolucionForm(BootstrapModelForm):
         self.fields['prestamos_id_prestamo'].queryset = Prestamo.objects.filter(
             estado__in=['ACTIVO', 'VENCIDO']
         ).select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material')
+
+
+class ConfiguracionGeneralForm(BootstrapModelForm):
+    class Meta:
+        model = ConfiguracionGeneral
+        fields = [
+            'monto_recargo', 'recargo_activo', 
+            'horario_lunes_viernes', 'abren_sabados', 'horario_sabados'
+        ]
+        labels = {
+            'monto_recargo': 'Monto del recargo por día (Gs)',
+            'recargo_activo': '¿El recargo está activo?',
+            'horario_lunes_viernes': 'Horario de atención Lunes a Viernes',
+            'abren_sabados': '¿Abren los Sábados?',
+            'horario_sabados': 'Horario de atención Sábados',
+        }
+
 

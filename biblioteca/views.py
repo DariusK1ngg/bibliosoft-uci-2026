@@ -9,13 +9,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion
+    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral
 )
 from .forms import (
     PrestamoForm, AlumnoForm, UserProfileForm,
     AutorForm, EditorialForm, CategoriaForm, GeneroForm,
     TipoDocumentoForm, FacultadForm, CarreraForm, DevolucionForm,
-    LibroForm, TrabajoInvestigacionForm, OtrosMaterialesForm
+    LibroForm, TrabajoInvestigacionForm, OtrosMaterialesForm, ConfiguracionGeneralForm
 )
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -166,7 +166,19 @@ class PrestamoListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         Prestamo.actualizar_vencidos()
-        return Prestamo.objects.all().order_by('-id_prestamo')
+        queryset = Prestamo.objects.all().order_by('-id_prestamo')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(id_prestamo__icontains=q) |
+                Q(ALUMNOS_id_alumno__nombre__icontains=q) |
+                Q(ALUMNOS_id_alumno__apellido__icontains=q) |
+                Q(ALUMNOS_id_alumno__matricula__icontains=q) |
+                Q(MATERIALES_id_material__titulo__icontains=q) |
+                Q(numero_entrada__icontains=q) |
+                Q(estado__icontains=q)
+            )
+        return queryset
 
 class PrestamoCreateView(LoginRequiredMixin, CreateView):
     model = Prestamo
@@ -184,19 +196,58 @@ class PrestamoCreateView(LoginRequiredMixin, CreateView):
             form.add_error(None, e.message)
             return self.form_invalid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        materiales_data = {}
+        materiales = Material.objects.all()
+        for m in materiales:
+            materiales_data[m.id_material] = {
+                'numeros': m.numeros_entrada_disponibles(),
+                'titulo': m.titulo,
+                'disponible': m.cantidad_disponible
+            }
+        context['materiales_json'] = materiales_data
+        return context
+
 class PrestamoUpdateView(LoginRequiredMixin, UpdateView):
     model = Prestamo
     form_class = PrestamoForm
     template_name = 'biblioteca/prestamo_form.html'
     success_url = reverse_lazy('prestamo-list')
 
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.estado == 'DEVUELTO':
+            messages.error(request, "No se puede editar un préstamo que ya ha sido devuelto.")
+            return redirect('prestamo-list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        materiales_data = {}
+        materiales = Material.objects.all()
+        prestamo = self.get_object()
+        for m in materiales:
+            disp = m.cantidad_disponible
+            if prestamo.MATERIALES_id_material == m:
+                disp += prestamo.cantidad
+            materiales_data[m.id_material] = {
+                'numeros': m.numeros_entrada_disponibles(exclude_prestamo_id=prestamo.pk),
+                'titulo': m.titulo,
+                'disponible': disp
+            }
+        context['materiales_json'] = materiales_data
+        return context
+
 class PrestamoProrrogaView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         prestamo = Prestamo.objects.filter(pk=pk).first()
         if prestamo:
             if prestamo.estado in ['ACTIVO', 'VENCIDO']:
+                prestamo.fecha_prestamo = timezone.now().date()
                 prestamo.fecha_vencimiento = timezone.now().date() + timezone.timedelta(days=2)
                 prestamo.estado = 'ACTIVO'
+                prestamo.prorrogado = True
                 prestamo.save()
                 messages.success(request, f"Se ha concedido una prórroga de 2 días para el préstamo #{prestamo.id_prestamo}.")
             else:
@@ -618,20 +669,35 @@ class CarreraDeleteView(BaseCatalogDeleteView):
     success_url = reverse_lazy('carrera-list')
 
 
-# --- DEVOLUCION CRUD ---
-class DevolucionListView(BaseCatalogListView):
+class DevolucionListView(LoginRequiredMixin, ListView):
     model = Devolucion
-    fields = ['id_devolucion', 'prestamos_id_prestamo', 'fecha_devolucion', 'estado_material', 'multa', 'pago_multa', 'observaciones']
-    headers = ['ID Devolución', 'Préstamo', 'Fecha Devolución', 'Estado Material', 'Multa (Gs)', '¿Pagó Multa?', 'Observaciones']
-    title = 'Devoluciones'
-    subtitle = 'Historial de devoluciones de material'
-    create_url_name = 'devolucion-create'
-    edit_url_name = None  # Read-only
-    col_class = 'col-lg-12'
+    template_name = 'biblioteca/devolucion_list.html'
+    context_object_name = 'devoluciones'
+
+    def get_queryset(self):
+        queryset = Devolucion.objects.all().select_related(
+            'prestamos_id_prestamo__ALUMNOS_id_alumno', 
+            'prestamos_id_prestamo__MATERIALES_id_material'
+        ).order_by('-id_devolucion')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(id_devolucion__icontains=q) |
+                Q(prestamos_id_prestamo__id_prestamo__icontains=q) |
+                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__nombre__icontains=q) |
+                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__apellido__icontains=q) |
+                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__matricula__icontains=q) |
+                Q(prestamos_id_prestamo__MATERIALES_id_material__titulo__icontains=q) |
+                Q(prestamos_id_prestamo__numero_entrada__icontains=q) |
+                Q(estado_material__icontains=q) |
+                Q(observaciones__icontains=q)
+            )
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['create_label'] = 'Registrar Devolución'
+        config = ConfiguracionGeneral.get_solo()
+        context['recargo_activo'] = config.recargo_activo
         return context
 
 class DevolucionCreateView(LoginRequiredMixin, CreateView):
@@ -664,7 +730,33 @@ class DevolucionCreateView(LoginRequiredMixin, CreateView):
             }
         context['prestamos_json'] = json.dumps(prestamos_data)
         context['hoy'] = timezone.now().date().strftime('%Y-%m-%d')
+        
+        # Add dynamic configuration for Javascript
+        config = ConfiguracionGeneral.get_solo()
+        context['recargo_activo'] = config.recargo_activo
+        context['monto_recargo'] = int(config.monto_recargo)
         return context
+
+
+class ConfiguracionGeneralUpdateView(LoginRequiredMixin, UpdateView):
+    model = ConfiguracionGeneral
+    form_class = ConfiguracionGeneralForm
+    template_name = 'biblioteca/configuracion_form.html'
+    success_url = reverse_lazy('configuracion-general')
+
+    def get_object(self, queryset=None):
+        return ConfiguracionGeneral.get_solo()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Configuración General'
+        context['subtitle'] = 'Configure los parámetros generales del sistema, incluyendo recargos y horarios de atención.'
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, "Configuración guardada correctamente.")
+        return super().form_valid(form)
+
 
 
 # --- REPORTES ---

@@ -225,7 +225,14 @@
                         <div class="info-icon"><i class="fas fa-clock"></i></div>
                         <div>
                             <div class="info-label">Horario de Atención</div>
-                            <div class="info-value">Lunes a Viernes<br>07:00 – 21:00 hs.</div>
+                            <div class="info-value">
+                                Lunes a Viernes<br>
+                                {{ config.horario_lunes_viernes }}
+                                {% if config.abren_sabados %}
+                                    <br>Sábados<br>
+                                    {{ config.horario_sabados }}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 

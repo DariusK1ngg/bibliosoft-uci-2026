@@ -180,6 +180,14 @@
         .dropdown-item:hover {
             background-color: #f0f4f9;
         }
+        .dropdown-item.active {
+            background-color: var(--primary) !important;
+            color: var(--white) !important;
+        }
+        .dropdown-item.active i {
+            color: var(--white) !important;
+            opacity: 1 !important;
+        }
         .dropdown-item.text-danger:hover {
             background-color: #fff0f0;
         }
@@ -325,6 +333,8 @@
                   <li><hr class="dropdown-divider opacity-25"></li>
                   <li><a class="dropdown-item" href="{% url 'facultad-list' %}"><i class="fas fa-university me-2 text-primary opacity-75"></i> Facultades</a></li>
                   <li><a class="dropdown-item" href="{% url 'carrera-list' %}"><i class="fas fa-graduation-cap me-2 text-primary opacity-75"></i> Carreras</a></li>
+                  <li><hr class="dropdown-divider opacity-25"></li>
+                  <li><a class="dropdown-item" href="{% url 'configuracion-general' %}"><i class="fas fa-cog me-2 text-primary opacity-75"></i> Configuración general</a></li>
               </ul>
           </li>
           <li><div class="topnav-divider"></div></li>
@@ -387,6 +397,7 @@
           <li><a class="nav-link" href="{% url 'tipodocumento-list' %}"><i class="fas fa-file-alt"></i> Tipos de Doc.</a></li>
           <li><a class="nav-link" href="{% url 'facultad-list' %}"><i class="fas fa-university"></i> Facultades</a></li>
           <li><a class="nav-link" href="{% url 'carrera-list' %}"><i class="fas fa-graduation-cap"></i> Carreras</a></li>
+          <li><a class="nav-link" href="{% url 'configuracion-general' %}"><i class="fas fa-cog"></i> Configuración general</a></li>
           <li><hr class="dropdown-divider opacity-25"></li>
           
           <li><a class="nav-link" href="/"><i class="fas fa-globe"></i> Ver Portal</a></li>

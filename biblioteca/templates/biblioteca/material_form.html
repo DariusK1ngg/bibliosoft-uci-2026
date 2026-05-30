@@ -259,7 +259,7 @@
 
                     <div class="row g-2 mt-2">
                         <!-- CANTIDAD -->
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <label class="form-label-custom">CANTIDAD <span class="text-asterisk">*</span></label>
                             {{ form.cantidad_total }}
                             {% for error in form.cantidad_total.errors %}
@@ -267,12 +267,12 @@
                             {% endfor %}
                         </div>
                         <!-- NÚMERO DE ENTRADA -->
-                        <div class="col-md-8">
+                        <div class="col-md-10">
                             <label class="form-label-custom">NÚMERO DE ENTRADA <span class="text-asterisk">*</span></label>
                             <div style="display: none;">
                                 {{ form.numero_entrada }}
                             </div>
-                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-wrap gap-2">
                                 <!-- Dynamic inputs will go here -->
                             </div>
                             {% for error in form.numero_entrada.errors %}
@@ -398,7 +398,7 @@
                             <div style="display: none;">
                                 {{ form.numero_entrada }}
                             </div>
-                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-wrap gap-2">
                                 <!-- Dynamic inputs will go here -->
                             </div>
                             {% for error in form.numero_entrada.errors %}
@@ -474,7 +474,7 @@
                             <div style="display: none;">
                                 {{ form.numero_entrada }}
                             </div>
-                            <div class="dynamic-entry-numbers-wrapper d-flex flex-column gap-2 mt-1">
+                            <div class="dynamic-entry-numbers-wrapper d-flex flex-wrap gap-2">
                                 <!-- Dynamic inputs will go here -->
                             </div>
                             {% for error in form.numero_entrada.errors %}
@@ -526,6 +526,10 @@
 </div>
 
 <style>
+    body {
+        overflow: hidden;
+    }
+
     /* Modal overlay styling to cover background */
     .custom-modal-overlay {
         position: fixed;
@@ -564,8 +568,9 @@
         overflow: hidden;
     }
 
+    /* Removed max-width restriction to allow flexible horizontal grid sizing */
     .dynamic-entry-numbers-wrapper {
-        max-width: 280px;
+        width: 100%;
     }
 
     @keyframes modalFadeIn {
@@ -660,6 +665,22 @@
         border-color: #80bdff;
         outline: 0;
         box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+    }
+
+    /* Style input groups nicely in the modal */
+    .custom-modal-body .input-group .form-control {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+    }
+    .custom-modal-body .input-group .input-group-text {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-radius: 4px;
+        border: 1px solid #cccccc;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        background-color: #f8fafc;
+        color: #64748b;
     }
 
     /* Hide up/down arrows (spinners) for input number fields */
@@ -856,13 +877,12 @@
                 wrapper.innerHTML = '';
 
                 for (let i = 1; i <= qty; i++) {
-                    const containerDiv = document.createElement('div');
-                    containerDiv.className = 'd-flex align-items-center gap-2';
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'input-group';
 
-                    const indexSpan = document.createElement('span');
-                    indexSpan.className = 'text-muted small fw-semibold';
-                    indexSpan.style.width = '20px';
-                    indexSpan.innerText = i + '.';
+                    const addonSpan = document.createElement('span');
+                    addonSpan.className = 'input-group-text fw-semibold';
+                    addonSpan.innerText = i + '.';
 
                     const inputEl = document.createElement('input');
                     inputEl.type = 'text';
@@ -872,7 +892,6 @@
                     inputEl.required = true;
 
                     // Apply standard styling to dynamic inputs matching mockup
-                    inputEl.style.borderRadius = '4px';
                     inputEl.style.border = '1px solid #cccccc';
                     inputEl.style.padding = '0.4rem 0.6rem';
                     inputEl.style.fontSize = '0.85rem';
@@ -880,9 +899,16 @@
 
                     inputEl.addEventListener('input', saveEntryNumbers);
 
-                    containerDiv.appendChild(indexSpan);
-                    containerDiv.appendChild(inputEl);
-                    wrapper.appendChild(containerDiv);
+                    groupDiv.appendChild(addonSpan);
+                    groupDiv.appendChild(inputEl);
+                    
+                    if (qty > 1) {
+                        groupDiv.style.width = 'calc(33.333% - 6px)';
+                        groupDiv.style.minWidth = '140px';
+                    } else {
+                        groupDiv.style.width = '100%';
+                    }
+                    wrapper.appendChild(groupDiv);
                 }
                 saveEntryNumbers();
             }

@@ -1,0 +1,158 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+        <div class="page-title-area mb-4">
+            <div>
+                <h1 class="page-title">{{ title }}</h1>
+                <p class="page-subtitle">{{ subtitle }}</p>
+            </div>
+        </div>
+
+        <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-4 shadow-sm" role="alert">
+                    {% for error in form.non_field_errors %}
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span>{{ error }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="row g-4">
+                <!-- Columna Izquierda: Configuración de Recargos -->
+                <div class="col-md-6">
+                    <div class="card-custom h-100">
+                        <div class="card-header-custom bg-light py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="fas fa-hand-holding-usd text-primary fs-5"></i>
+                            <h5 class="m-0 fw-bold text-dark" style="font-size: 1.05rem;">Configuración de Recargos</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Toggle Recargo Activo -->
+                            <div class="mb-4">
+                                <label for="{{ form.recargo_activo.id_for_label }}" class="form-label fw-bold text-muted small uppercase mb-2">Estado de Multas</label>
+                                <div class="form-check form-switch mt-2">
+                                    {{ form.recargo_activo }}
+                                    <label class="form-check-label fw-semibold text-dark ms-2" for="{{ form.recargo_activo.id_for_label }}">
+                                        ¿El recargo está activo?
+                                    </label>
+                                </div>
+                                <div class="form-text text-muted small mt-2">
+                                    <i class="fas fa-info-circle me-1"></i> Si se desactiva, los préstamos vencidos no generarán recargos.
+                                </div>
+                            </div>
+
+                            <!-- Monto del Recargo -->
+                            <div class="mb-3" id="monto_recargo_container">
+                                <label for="{{ form.monto_recargo.id_for_label }}" class="form-label fw-bold text-dark">{{ form.monto_recargo.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted fw-semibold">Gs</span>
+                                    {{ form.monto_recargo }}
+                                </div>
+                                {% for error in form.monto_recargo.errors %}
+                                    <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text text-muted small mt-2">
+                                    <i class="fas fa-info-circle me-1"></i> Se aplica este monto por cada día corrido de retraso.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Horarios de Atención -->
+                <div class="col-md-6">
+                    <div class="card-custom h-100">
+                        <div class="card-header-custom bg-light py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="fas fa-clock text-primary fs-5"></i>
+                            <h5 class="m-0 fw-bold text-dark" style="font-size: 1.05rem;">Horarios de Atención</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Horario Lunes a Viernes -->
+                            <div class="mb-4">
+                                <label for="{{ form.horario_lunes_viernes.id_for_label }}" class="form-label fw-bold text-dark">{{ form.horario_lunes_viernes.label }}</label>
+                                {{ form.horario_lunes_viernes }}
+                                {% for error in form.horario_lunes_viernes.errors %}
+                                    <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Toggle Abren Sábados -->
+                            <div class="mb-4">
+                                <label for="{{ form.abren_sabados.id_for_label }}" class="form-label fw-bold text-muted small uppercase mb-2">Atención los Sábados</label>
+                                <div class="form-check form-switch mt-2">
+                                    {{ form.abren_sabados }}
+                                    <label class="form-check-label fw-semibold text-dark ms-2" for="{{ form.abren_sabados.id_for_label }}">
+                                        ¿Abren los sábados?
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Horario Sábados -->
+                            <div class="mb-3" id="horario_sabados_container">
+                                <label for="{{ form.horario_sabados.id_for_label }}" class="form-label fw-bold text-dark">{{ form.horario_sabados.label }}</label>
+                                {{ form.horario_sabados }}
+                                {% for error in form.horario_sabados.errors %}
+                                    <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-5 opacity-25">
+
+            <div class="d-flex justify-content-end gap-3">
+                <a href="{% url 'dashboard' %}" class="btn btn-light border px-4">Cancelar</a>
+                <button type="submit" class="btn btn-primary-custom px-5">
+                    <i class="fas fa-save me-2"></i> Guardar Configuración
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const toggleRecargo = document.getElementById('id_recargo_activo');
+        const containerMonto = document.getElementById('monto_recargo_container');
+        const toggleSabados = document.getElementById('id_abren_sabados');
+        const containerSabados = document.getElementById('horario_sabados_container');
+
+        // Function to toggle fine amount visibility
+        function updateRecargoVisibility() {
+            if (toggleRecargo.checked) {
+                containerMonto.style.display = 'block';
+            } else {
+                containerMonto.style.display = 'none';
+            }
+        }
+
+        // Function to toggle Saturday hours visibility
+        function updateSabadosVisibility() {
+            if (toggleSabados.checked) {
+                containerSabados.style.display = 'block';
+            } else {
+                containerSabados.style.display = 'none';
+            }
+        }
+
+        // Add event listeners
+        if (toggleRecargo && containerMonto) {
+            toggleRecargo.addEventListener('change', updateRecargoVisibility);
+            updateRecargoVisibility();
+        }
+
+        if (toggleSabados && containerSabados) {
+            toggleSabados.addEventListener('change', updateSabadosVisibility);
+            updateSabadosVisibility();
+        }
+    });
+</script>
+{% endblock %}

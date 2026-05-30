@@ -7,23 +7,33 @@
 <style>
     /* Styling tweaks for Tom Select to match custom input theme */
     .ts-wrapper.form-select {
-        padding: 0 !important;
-        border: none !important;
-        background: none !important;
-    }
-    .ts-control {
         border: 1px solid var(--border) !important;
         border-radius: 8px !important;
-        padding: 0.6rem 1rem !important;
-        font-size: 0.9rem !important;
-        color: var(--text) !important;
+        padding: 0 !important;
         background-color: var(--white) !important;
         box-shadow: none !important;
         transition: border-color 0.2s, box-shadow 0.2s !important;
     }
-    .ts-wrapper.focus .ts-control {
+    .ts-wrapper.form-select.focus,
+    .ts-wrapper.form-select.input-active {
         border-color: var(--primary) !important;
         box-shadow: 0 0 0 3px rgba(0, 78, 162, 0.15) !important;
+    }
+    .ts-wrapper.form-select .ts-control {
+        border: none !important;
+        background: none !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.9rem !important;
+        color: var(--text) !important;
+        box-shadow: none !important;
+    }
+    /* Add chevron background ONLY to single select */
+    .ts-wrapper.form-select.single .ts-control {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23495057' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.75rem center !important;
+        background-size: 16px 12px !important;
+        padding-right: 2.25rem !important;
     }
     .ts-dropdown {
         border: 1px solid var(--border) !important;
@@ -42,6 +52,36 @@
     .ts-dropdown .active {
         background-color: rgba(0, 78, 162, 0.08) !important;
         color: var(--primary) !important;
+    }
+    
+    /* Premium style for Tom Select selected tags in multiple select */
+    .ts-wrapper .ts-control .item {
+        background-color: rgba(0, 78, 162, 0.08) !important;
+        color: var(--primary) !important;
+        border: 1px solid rgba(0, 78, 162, 0.15) !important;
+        border-radius: 6px !important;
+        padding: 2px 8px !important;
+        font-size: 0.85rem !important;
+        margin: 2px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    .ts-wrapper .ts-control .item .remove {
+        border-left: 1px solid rgba(0, 78, 162, 0.15) !important;
+        margin-left: 6px !important;
+        padding-left: 4px !important;
+        color: var(--primary) !important;
+        text-decoration: none !important;
+    }
+    
+    /* Hide spin-buttons for input quantity */
+    input#id_cantidad::-webkit-outer-spin-button,
+    input#id_cantidad::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input#id_cantidad {
+        -moz-appearance: textfield;
     }
 </style>
 
@@ -71,18 +111,47 @@
                     {% endif %}
                     
                     <div class="row g-4">
-                        {% for field in form %}
+                        <!-- Alumno Select -->
                         <div class="col-12">
-                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-dark">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text text-muted small"><i class="fas fa-info-circle me-1"></i>{{ field.help_text }}</div>
-                            {% endif %}
-                            {% for error in field.errors %}
+                            <label for="{{ form.ALUMNOS_id_alumno.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.ALUMNOS_id_alumno.label }}</label>
+                            {{ form.ALUMNOS_id_alumno }}
+                            {% for error in form.ALUMNOS_id_alumno.errors %}
                                 <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
-                        {% endfor %}
+
+                        <!-- Material Select -->
+                        <div class="col-12">
+                            <label for="{{ form.MATERIALES_id_material.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.MATERIALES_id_material.label }}</label>
+                            {{ form.MATERIALES_id_material }}
+                            <div class="form-text text-muted small mt-1" id="material_stock_label" style="display: none;">
+                                <i class="fas fa-info-circle me-1"></i> Copias disponibles en inventario: <span id="material_stock_count" class="fw-bold">0</span>
+                            </div>
+                            {% for error in form.MATERIALES_id_material.errors %}
+                                <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Cantidad -->
+                        <div class="col-md-6">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.cantidad.label }}</label>
+                            {{ form.cantidad }}
+                            {% for error in form.cantidad.errors %}
+                                <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Número de Entrada -->
+                        <div class="col-md-6" id="seccion_numero_entrada" style="display: none;">
+                            <label for="{{ form.numero_entrada.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.numero_entrada.label }}</label>
+                            {{ form.numero_entrada }}
+                            <div class="form-text text-muted small mt-1">
+                                Seleccione el número de entrada del ejemplar que está prestando.
+                            </div>
+                            {% for error in form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
                     </div>
                     
                     <hr class="my-5 opacity-25">
@@ -99,57 +168,183 @@
     </div>
 </div>
 
-<!-- Include Tom Select JS and initialize -->
+<!-- Load materials data serialized from view -->
+{{ materiales_json|json_script:"materiales-data" }}
+
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Initialize Tom Select for Alumno
-        const tsAlumno = new TomSelect("#id_ALUMNOS_id_alumno", {
-            create: false,
-            placeholder: "Busque y seleccione un alumno...",
-            allowEmptyOption: false,
-            maxOptions: 100,
-            onItemAdd: function() {
-                this.setTextboxValue('');
-                this.refreshOptions(false);
-            }
-        });
+        let materialesData = JSON.parse(document.getElementById('materiales-data').textContent);
+        if (typeof materialesData === 'string') {
+            materialesData = JSON.parse(materialesData);
+        }
+        const editingLoanId = "{% if object %}{{ object.pk }}{% endif %}";
+        const currentLoanNe = "{% if object %}{{ object.numero_entrada }}{% endif %}";
+        
+        let tsMaterial; // Declare in outer scope to prevent TDZ issues
+        let tsAlumno;
+        let tsNumeroEntrada;
 
-        if (tsAlumno && tsAlumno.control_input) {
-            tsAlumno.control_input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    const activeOption = tsAlumno.dropdown.querySelector('.active');
-                    if (!activeOption || activeOption.getAttribute('data-value') === '') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
+        // Initialize Tom Select for Alumno
+        try {
+            tsAlumno = new TomSelect("#id_ALUMNOS_id_alumno", {
+                create: false,
+                placeholder: "Busque y seleccione un alumno...",
+                allowEmptyOption: false,
+                maxOptions: 100,
+                onItemAdd: function() {
+                    this.setTextboxValue('');
+                    this.refreshOptions(false);
                 }
             });
+        } catch (e) {
+            console.error("Error initializing Alumno TomSelect:", e);
+        }
+
+        // Initialize Tom Select for Numero Entrada (Multiple Selection)
+        try {
+            tsNumeroEntrada = new TomSelect("#id_numero_entrada", {
+                create: false,
+                placeholder: "Seleccione los números de entrada...",
+                plugins: ['remove_button'],
+                maxItems: null,
+                onItemAdd: function() {
+                    this.setTextboxValue('');
+                    this.refreshOptions(false);
+                }
+            });
+        } catch (e) {
+            console.error("Error initializing Numero Entrada TomSelect:", e);
+        }
+
+        // Elements
+        const selectMaterial = document.getElementById('id_MATERIALES_id_material');
+        const inputCantidad = document.getElementById('id_cantidad');
+        const selectNumeroEntrada = document.getElementById('id_numero_entrada');
+        const seccionNumeroEntrada = document.getElementById('seccion_numero_entrada');
+        const materialStockLabel = document.getElementById('material_stock_label');
+        const materialStockCount = document.getElementById('material_stock_count');
+
+        // Prevent mouse wheel scrolling from changing input quantity value
+        if (inputCantidad) {
+            inputCantidad.addEventListener('wheel', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Function to update dynamic fields when material changes
+        function handleMaterialChange(materialId, isInitial = false) {
+            console.log("handleMaterialChange called with ID:", materialId, "Initial:", isInitial);
+            
+            if (!materialId) {
+                seccionNumeroEntrada.style.display = 'none';
+                materialStockLabel.style.display = 'none';
+                if (tsNumeroEntrada) {
+                    tsNumeroEntrada.clear();
+                    tsNumeroEntrada.clearOptions();
+                }
+                return;
+            }
+
+            let selectedOptionText = "";
+            if (typeof tsMaterial !== 'undefined' && tsMaterial && tsMaterial.options && tsMaterial.options[materialId]) {
+                selectedOptionText = tsMaterial.options[materialId].text || "";
+            }
+            
+            let material = materialesData[materialId] || materialesData[String(materialId)] || materialesData[Number(materialId)];
+            
+            if (!material) {
+                material = { titulo: "", numeros: [], disponible: 0 };
+            }
+
+            // Extract stock and entry numbers from text if missing from JSON
+            if (selectedOptionText) {
+                if (material.disponible === undefined || material.disponible === 0) {
+                    const matchStock = selectedOptionText.match(/Disp:\s*(\d+)/i) || selectedOptionText.match(/Disponible:\s*(\d+)/i);
+                    if (matchStock) material.disponible = parseInt(matchStock[1], 10);
+                }
+                if (!material.numeros || material.numeros.length === 0) {
+                    const matchNums = selectedOptionText.match(/N[°o]\s*Entrada:\s*([\d\s*,\s*-]+)/i) || selectedOptionText.match(/N[°o]\.\s*Entrada:\s*([\d\s*,\s*-]+)/i);
+                    if (matchNums) {
+                        const parts = matchNums[1].split(/[,/;]/).map(x => x.trim()).filter(x => x);
+                        material.numeros = [];
+                        parts.forEach(part => {
+                            const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+                            if (rangeMatch) {
+                                for (let i = parseInt(rangeMatch[1]); i <= parseInt(rangeMatch[2]); i++) material.numeros.push(String(i));
+                            } else {
+                                material.numeros.push(part);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            materialStockCount.textContent = material.disponible !== undefined ? material.disponible : '0';
+            materialStockLabel.style.display = 'block';
+
+            if (inputCantidad) inputCantidad.max = material.disponible || 1;
+
+            const numeros = material.numeros;
+            if (numeros && numeros.length > 0) {
+                const targetValue = isInitial && currentLoanNe ? currentLoanNe : (selectNumeroEntrada.value || "");
+                const targetValues = targetValue ? targetValue.split(',').map(x => x.trim()).filter(x => x) : [];
+                
+                if (tsNumeroEntrada) {
+                    tsNumeroEntrada.clear();
+                    tsNumeroEntrada.clearOptions();
+                    
+                    if (isInitial && currentLoanNe) {
+                        const currentNes = currentLoanNe.split(',').map(x => x.trim()).filter(x => x);
+                        currentNes.forEach(num => tsNumeroEntrada.addOption({value: num, text: num}));
+                        tsNumeroEntrada.setValue(currentNes);
+                    }
+                    
+                    numeros.forEach(num => {
+                        if (!tsNumeroEntrada.options[num]) {
+                            tsNumeroEntrada.addOption({value: num, text: num});
+                        }
+                    });
+                    
+                    if (!isInitial && targetValues.length > 0) {
+                        tsNumeroEntrada.setValue(targetValues);
+                    }
+                }
+                
+                selectNumeroEntrada.setAttribute('required', 'required');
+                seccionNumeroEntrada.style.display = 'block';
+            } else {
+                seccionNumeroEntrada.style.display = 'none';
+                if (tsNumeroEntrada) {
+                    tsNumeroEntrada.clear();
+                    tsNumeroEntrada.clearOptions();
+                }
+                selectNumeroEntrada.removeAttribute('required');
+            }
         }
 
         // Initialize Tom Select for Material
-        const tsMaterial = new TomSelect("#id_MATERIALES_id_material", {
-            create: false,
-            placeholder: "Busque y seleccione un material...",
-            allowEmptyOption: false,
-            maxOptions: 100,
-            onItemAdd: function() {
-                this.setTextboxValue('');
-                this.refreshOptions(false);
-            }
-        });
-
-        if (tsMaterial && tsMaterial.control_input) {
-            tsMaterial.control_input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    const activeOption = tsMaterial.dropdown.querySelector('.active');
-                    if (!activeOption || activeOption.getAttribute('data-value') === '') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
+        try {
+            tsMaterial = new TomSelect("#id_MATERIALES_id_material", {
+                create: false,
+                placeholder: "Busque y seleccione un material...",
+                allowEmptyOption: false,
+                maxOptions: 100,
+                onItemAdd: function() {
+                    this.setTextboxValue('');
+                    this.refreshOptions(false);
+                },
+                onChange: function(value) {
+                    if (selectMaterial) selectMaterial.value = value;
+                    handleMaterialChange(value, false);
                 }
             });
+        } catch (e) {
+            console.error("Error initializing Material TomSelect:", e);
         }
+
+        // Run on initial load in case editing or pre-filled
+        handleMaterialChange(selectMaterial ? selectMaterial.value : '', true);
     });
 </script>
 {% endblock %}
