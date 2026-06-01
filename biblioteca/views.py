@@ -9,7 +9,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral, BajaMaterial
+    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral, BajaMaterial,
+    RegistroAuditoria
 )
 from .forms import (
     PrestamoForm, AlumnoForm, UserProfileForm,
@@ -352,6 +353,7 @@ class PrestamoProrrogaView(LoginRequiredMixin, View):
                 prestamo.fecha_vencimiento = timezone.localdate() + timezone.timedelta(days=2)
                 prestamo.estado = 'ACTIVO'
                 prestamo.prorrogado = True
+                prestamo._audit_prorroga = True
                 prestamo.save()
                 messages.success(request, f"Se ha concedido una prórroga de 2 días para el préstamo #{prestamo.id_prestamo}.")
             else:
@@ -1082,5 +1084,37 @@ class ReportePrintView(LoginRequiredMixin, TemplateView):
         context['rows'] = rows
         context['tipo'] = tipo
         
+        return context
+
+
+class AuditoriaListView(LoginRequiredMixin, ListView):
+    model = RegistroAuditoria
+    template_name = 'biblioteca/auditoria_list.html'
+    context_object_name = 'registros'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = RegistroAuditoria.objects.all().select_related('usuario').order_by('-fecha_hora')
+        
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(usuario__username__icontains=q) |
+                Q(tabla__icontains=q) |
+                Q(detalle__icontains=q) |
+                Q(ip_address__icontains=q)
+            )
+            
+        filtro_accion = self.request.GET.get('filtro_accion')
+        if filtro_accion:
+            queryset = queryset.filter(accion=filtro_accion)
+            
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Auditoría del Sistema'
+        context['subtitle'] = 'Registro histórico de acciones, modificaciones y eventos de seguridad.'
+        context['acciones_disponibles'] = RegistroAuditoria.ACCIONES
         return context
 

@@ -476,3 +476,35 @@ class ConfiguracionGeneral(models.Model):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
 
+
+class RegistroAuditoria(models.Model):
+    ACCIONES = [
+        ('CREACION', 'Creación'),
+        ('MODIFICACION', 'Modificación'),
+        ('ELIMINACION', 'Eliminación'),
+        ('INICIO_SESION', 'Inicio de Sesión'),
+        ('CERRAR_SESION', 'Cierre de Sesión'),
+        ('PRORROGA', 'Prórroga'),
+        ('ACTIVACION_CARNET', 'Activación de Carnet'),
+        ('DESACTIVACION_CARNET', 'Desactivación de Carnet'),
+    ]
+
+    id_auditoria = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Usuario')
+    fecha_hora = models.DateTimeField(default=timezone.now, verbose_name='Fecha y Hora')
+    accion = models.CharField(max_length=50, choices=ACCIONES, verbose_name='Acción')
+    tabla = models.CharField(max_length=100, verbose_name='Módulo/Tabla')
+    registro_id = models.CharField(max_length=50, blank=True, verbose_name='ID Registro')
+    detalle = models.TextField(verbose_name='Detalle de la Acción')
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='Dirección IP')
+
+    class Meta:
+        verbose_name = 'Registro de Auditoría'
+        verbose_name_plural = 'Registros de Auditoría'
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        usr = self.usuario.username if self.usuario else "Sistema"
+        return f"{self.fecha_hora.strftime('%d/%m/%Y %H:%M:%S')} - {usr} - {self.get_accion_display()} en {self.tabla}"
+
+

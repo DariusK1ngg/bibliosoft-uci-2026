@@ -1,0 +1,182 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="page-title-area">
+    <div>
+        <h1 class="page-title">{{ title }}</h1>
+        <p class="page-subtitle">{{ subtitle }}</p>
+    </div>
+</div>
+
+<div class="card-custom mb-4">
+    <div class="card-header-custom d-flex justify-content-between align-items-center bg-white flex-wrap gap-2">
+        <h5 class="mb-0 text-dark fw-bold">Registro de Eventos</h5>
+        
+        <!-- Search and filter form -->
+        <form action="{% url 'auditoria-list' %}" method="get" class="d-flex gap-2 align-items-center flex-wrap" style="max-width: 600px; width: 100%;">
+            <div class="input-group input-group-sm flex-grow-1" style="max-width: 280px;">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar por usuario, detalle, IP...">
+            </div>
+            
+            <div class="input-group input-group-sm" style="max-width: 220px;">
+                <span class="input-group-text bg-light text-muted"><i class="fas fa-filter"></i></span>
+                <select name="filtro_accion" class="form-select bg-light" onchange="this.form.submit()">
+                    <option value="">Todas las Acciones</option>
+                    {% for val, label in acciones_disponibles %}
+                        <option value="{{ val }}" {% if request.GET.filtro_accion == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary d-none">Filtrar</button>
+        </form>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th width="15%">FECHA Y HORA</th>
+                    <th width="15%">USUARIO</th>
+                    <th width="15%">ACCION</th>
+                    <th width="15%">MODULO/TABLA</th>
+                    <th width="12%">DIRECCION IP</th>
+                    <th width="28%">DETALLE DE LA ACCION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros %}
+                <tr>
+                    <td>
+                        <span class="text-dark fw-medium">{{ registro.fecha_hora|date:"d/m/Y H:i:s" }}</span>
+                    </td>
+                    <td>
+                        {% if registro.usuario %}
+                            <div class="fw-bold text-dark"><i class="fas fa-user-circle text-primary me-1 opacity-75"></i> {{ registro.usuario.username }}</div>
+                        {% else %}
+                            <div class="text-muted"><i class="fas fa-robot me-1 opacity-50"></i> Sistema</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if registro.accion == 'CREACION' %}
+                            <span class="badge badge-custom badge-soft-success">
+                                <i class="fas fa-plus-circle me-1"></i> Creación
+                            </span>
+                        {% elif registro.accion == 'MODIFICACION' %}
+                            <span class="badge badge-custom badge-soft-warning">
+                                <i class="fas fa-edit me-1"></i> Modificación
+                            </span>
+                        {% elif registro.accion == 'ELIMINACION' %}
+                            <span class="badge badge-custom badge-soft-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Eliminación
+                            </span>
+                        {% elif registro.accion == 'INICIO_SESION' %}
+                            <span class="badge badge-custom text-info-emphasis bg-info-subtle border border-info-subtle">
+                                <i class="fas fa-sign-in-alt me-1"></i> Login
+                            </span>
+                        {% elif registro.accion == 'CERRAR_SESION' %}
+                            <span class="badge badge-custom text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </span>
+                        {% elif registro.accion == 'PRORROGA' %}
+                            <span class="badge badge-custom text-primary-emphasis bg-primary-subtle border border-primary-subtle" style="background: rgba(111, 66, 193, 0.1) !important; color: #6f42c1 !important; border-color: rgba(111, 66, 193, 0.15) !important;">
+                                <i class="fas fa-history me-1"></i> Prórroga
+                            </span>
+                        {% elif registro.accion == 'ACTIVACION_CARNET' %}
+                            <span class="badge badge-custom text-success-emphasis bg-success-subtle border border-success-subtle">
+                                <i class="fas fa-id-card me-1"></i> Activación Carnet
+                            </span>
+                        {% elif registro.accion == 'DESACTIVACION_CARNET' %}
+                            <span class="badge badge-custom text-danger-emphasis bg-danger-subtle border border-danger-subtle">
+                                <i class="fas fa-id-card-slash me-1"></i> Desact. Carnet
+                            </span>
+                        {% else %}
+                            <span class="badge badge-custom bg-light text-dark">
+                                {{ registro.get_accion_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">{{ registro.tabla }}</span>
+                    </td>
+                    <td>
+                        <span class="text-muted small"><i class="fas fa-network-wired me-1 opacity-75"></i> {{ registro.ip_address|default:"—" }}</span>
+                    </td>
+                    <td>
+                        <div class="text-dark fw-normal" style="font-size: 0.875rem; max-width: 450px; overflow-wrap: break-word;">
+                            {{ registro.detalle }}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="fas fa-list fa-3x mb-3 opacity-25"></i>
+                        <p class="mb-0">No se encontraron registros de auditoría en la búsqueda.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Navegación de páginas">
+    <ul class="pagination pagination-sm justify-content-center mt-4">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link text-primary" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.filtro_accion %}&filtro_accion={{ request.GET.filtro_accion }}{% endif %}" aria-label="Primera">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link text-primary" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.filtro_accion %}&filtro_accion={{ request.GET.filtro_accion }}{% endif %}" aria-label="Anterior">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link bg-primary border-primary text-white">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link text-primary" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.filtro_accion %}&filtro_accion={{ request.GET.filtro_accion }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link text-primary" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.filtro_accion %}&filtro_accion={{ request.GET.filtro_accion }}{% endif %}" aria-label="Siguiente">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link text-primary" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.filtro_accion %}&filtro_accion={{ request.GET.filtro_accion }}{% endif %}" aria-label="Última">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;&raquo;</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

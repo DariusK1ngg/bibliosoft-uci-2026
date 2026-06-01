@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Autor, Editorial, Categoria, Genero, TipoDocumento,
     Facultad, Carrera, Alumno, Material, Prestamo, Devolucion,
-    MaterialCarrera, MaterialGenero, BajaMaterial
+    MaterialCarrera, MaterialGenero, BajaMaterial, RegistroAuditoria
 )
 
 @admin.register(Autor)
@@ -82,3 +82,20 @@ class BajaMaterialAdmin(admin.ModelAdmin):
     list_display = ('id_baja', 'material', 'cantidad', 'numero_entrada', 'motivo', 'fecha_baja')
     search_fields = ('material__titulo', 'numero_entrada')
     list_filter = ('motivo', 'fecha_baja')
+
+
+@admin.register(RegistroAuditoria)
+class RegistroAuditoriaAdmin(admin.ModelAdmin):
+    list_display = ('fecha_hora', 'usuario', 'accion', 'tabla', 'registro_id', 'ip_address', 'detalle')
+    list_filter = ('accion', 'tabla', 'fecha_hora')
+    search_fields = ('usuario__username', 'detalle', 'ip_address')
+    readonly_fields = ('fecha_hora', 'usuario', 'accion', 'tabla', 'registro_id', 'ip_address', 'detalle')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
