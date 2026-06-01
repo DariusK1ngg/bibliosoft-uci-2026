@@ -33,14 +33,14 @@ class LibroForm(BootstrapModelForm):
             ('Prestado', 'Prestado'),
             ('No Disponible', 'No Disponible')
         ],
-        initial='Permanente',
+        initial='Disponible',
         label='Estado'
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk and not self.initial.get('fecha_ingreso'):
-            self.initial['fecha_ingreso'] = timezone.now().date()
+            self.initial['fecha_ingreso'] = timezone.localdate()
         
         # Set fields as required based on visual mockup asterisks
         required_fields = [
@@ -155,7 +155,7 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk and not self.initial.get('fecha_ingreso'):
-            self.initial['fecha_ingreso'] = timezone.now().date()
+            self.initial['fecha_ingreso'] = timezone.localdate()
         
         if self.instance.pk and self.instance.tipo_trabajo:
             tipo_doc = TipoDocumento.objects.filter(descripcion=self.instance.tipo_trabajo).first()
@@ -166,11 +166,51 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
         required_fields = [
             'titulo', 'titulo_grado', 'autores_id_autor',
             'carreras', 'año_publicacion', 'estado_material', 'fecha_ingreso',
-            'numero_entrada', 'tipo_trabajo'
+            'numero_entrada', 'tipo_trabajo', 'cantidad_total'
         ]
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad_total = cleaned_data.get('cantidad_total')
+        numero_entrada = cleaned_data.get('numero_entrada')
+
+        if cantidad_total is not None and numero_entrada:
+            import re
+            def parse_entry_numbers(val):
+                if not val:
+                    return []
+                parts = re.split(r'[,/;]', val)
+                parts = [p.strip() for p in parts if p.strip()]
+                return parts
+
+            def count_entry_numbers(val):
+                parts = parse_entry_numbers(val)
+                total_count = 0
+                for part in parts:
+                    match = re.match(r'^(\d+)\s*-\s*(\d+)$', part)
+                    if match:
+                        start = int(match.group(1))
+                        end = int(match.group(2))
+                        if end >= start:
+                            total_count += (end - start + 1)
+                        else:
+                            total_count += 1
+                    else:
+                        total_count += 1
+                return total_count
+
+            count = count_entry_numbers(numero_entrada)
+            if cantidad_total > 1:
+                if count > cantidad_total:
+                    self.add_error('numero_entrada', f"El número de entradas ingresadas ({count}) supera la cantidad máxima de materiales ({cantidad_total}).")
+            else:
+                if count > 1:
+                    self.add_error('numero_entrada', f"Solo se permite 1 número de entrada cuando la cantidad de materiales es 1.")
+
+        return cleaned_data
 
 
 
@@ -181,6 +221,14 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
             instance.tipo_trabajo = tipo_doc.descripcion
         else:
             instance.tipo_trabajo = ""
+            
+        if not self.instance.pk:
+            instance.cantidad_disponible = instance.cantidad_total
+        else:
+            original = Material.objects.get(pk=self.instance.pk)
+            diff = instance.cantidad_total - original.cantidad_total
+            instance.cantidad_disponible = max(0, original.cantidad_disponible + diff)
+            
         if commit:
             instance.save()
             self.save_m2m()
@@ -191,7 +239,7 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
         fields = [
             'titulo', 'titulo_grado', 'autores_id_autor',
             'carreras', 'año_publicacion', 'estado_material', 'fecha_ingreso',
-            'numero_entrada', 'tipo_trabajo'
+            'numero_entrada', 'tipo_trabajo', 'cantidad_total'
         ]
         widgets = {
             'fecha_ingreso': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
@@ -206,6 +254,7 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
             'fecha_ingreso': 'Fecha de Ingreso',
             'numero_entrada': 'Número de Entrada',
             'tipo_trabajo': 'Tipo de Trabajo',
+            'cantidad_total': 'Cantidad',
         }
 
 class OtrosMaterialesForm(BootstrapModelForm):
@@ -216,7 +265,7 @@ class OtrosMaterialesForm(BootstrapModelForm):
             ('Prestado', 'Prestado'),
             ('No Disponible', 'No Disponible')
         ],
-        initial='Permanente',
+        initial='Disponible',
         label='Estado'
     )
     tipo_material = forms.ModelChoiceField(
@@ -228,7 +277,7 @@ class OtrosMaterialesForm(BootstrapModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk and not self.initial.get('fecha_ingreso'):
-            self.initial['fecha_ingreso'] = timezone.now().date()
+            self.initial['fecha_ingreso'] = timezone.localdate()
 
         if self.instance.pk and self.instance.tipo_material:
             tipo_doc = TipoDocumento.objects.filter(descripcion=self.instance.tipo_material).first()
@@ -238,11 +287,51 @@ class OtrosMaterialesForm(BootstrapModelForm):
         # Set fields as required based on visual mockup asterisks
         required_fields = [
             'titulo', 'año_publicacion',
-            'numero_entrada', 'estado_material', 'fecha_ingreso', 'tipo_material'
+            'numero_entrada', 'estado_material', 'fecha_ingreso', 'tipo_material', 'cantidad_total'
         ]
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad_total = cleaned_data.get('cantidad_total')
+        numero_entrada = cleaned_data.get('numero_entrada')
+
+        if cantidad_total is not None and numero_entrada:
+            import re
+            def parse_entry_numbers(val):
+                if not val:
+                    return []
+                parts = re.split(r'[,/;]', val)
+                parts = [p.strip() for p in parts if p.strip()]
+                return parts
+
+            def count_entry_numbers(val):
+                parts = parse_entry_numbers(val)
+                total_count = 0
+                for part in parts:
+                    match = re.match(r'^(\d+)\s*-\s*(\d+)$', part)
+                    if match:
+                        start = int(match.group(1))
+                        end = int(match.group(2))
+                        if end >= start:
+                            total_count += (end - start + 1)
+                        else:
+                            total_count += 1
+                    else:
+                        total_count += 1
+                return total_count
+
+            count = count_entry_numbers(numero_entrada)
+            if cantidad_total > 1:
+                if count > cantidad_total:
+                    self.add_error('numero_entrada', f"El número de entradas ingresadas ({count}) supera la cantidad máxima de materiales ({cantidad_total}).")
+            else:
+                if count > 1:
+                    self.add_error('numero_entrada', f"Solo se permite 1 número de entrada cuando la cantidad de materiales es 1.")
+
+        return cleaned_data
 
 
 
@@ -253,6 +342,14 @@ class OtrosMaterialesForm(BootstrapModelForm):
             instance.tipo_material = tipo_doc.descripcion
         else:
             instance.tipo_material = ""
+            
+        if not self.instance.pk:
+            instance.cantidad_disponible = instance.cantidad_total
+        else:
+            original = Material.objects.get(pk=self.instance.pk)
+            diff = instance.cantidad_total - original.cantidad_total
+            instance.cantidad_disponible = max(0, original.cantidad_disponible + diff)
+            
         if commit:
             instance.save()
             self.save_m2m()
@@ -262,7 +359,7 @@ class OtrosMaterialesForm(BootstrapModelForm):
         model = Material
         fields = [
             'issn', 'titulo', 'año_publicacion',
-            'numero_entrada', 'estado_material', 'fecha_ingreso', 'tipo_material'
+            'numero_entrada', 'estado_material', 'fecha_ingreso', 'tipo_material', 'cantidad_total'
         ]
         widgets = {
             'fecha_ingreso': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
@@ -275,6 +372,7 @@ class OtrosMaterialesForm(BootstrapModelForm):
             'estado_material': 'Estado',
             'fecha_ingreso': 'Fecha de Ingreso',
             'tipo_material': 'Tipo de Material',
+            'cantidad_total': 'Cantidad',
         }
 
 
@@ -384,7 +482,12 @@ class PrestamoForm(BootstrapModelForm):
     def __init__(self, *args, **kwargs):
         from django.db.models import Q
         super().__init__(*args, **kwargs)
-        self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(estado=True)
+        if self.instance and self.instance.pk:
+            self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(
+                Q(estado=True) | Q(pk=self.instance.ALUMNOS_id_alumno.pk)
+            )
+        else:
+            self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(estado=True)
         
         # Populate choices dynamically from POST data if bound
         if self.is_bound:
@@ -396,34 +499,58 @@ class PrestamoForm(BootstrapModelForm):
                 except Material.DoesNotExist:
                     pass
                     
-        if self.instance and self.instance.pk:
-            self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(
-                Q(cantidad_disponible__gt=0) | Q(pk=self.instance.MATERIALES_id_material.pk)
-            )
-            m = self.instance.MATERIALES_id_material
-            disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
-            current_ne = self.instance.numero_entrada
-            current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
-            
-            choices = []
-            for c_ne in current_nes:
-                choices.append((c_ne, c_ne))
-            for n in disponibles:
-                if n not in current_nes:
-                    choices.append((n, n))
-            
-            self.fields['numero_entrada'].choices = choices
-            self.initial['numero_entrada'] = current_nes
+        if self.is_bound:
+            self.fields['MATERIALES_id_material'].queryset = Material.objects.all()
+            if self.instance and self.instance.pk:
+                m = self.instance.MATERIALES_id_material
+                disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
+                current_ne = self.instance.numero_entrada
+                current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+                
+                if str(m.pk) == str(self.data.get('MATERIALES_id_material')):
+                    choices = []
+                    for c_ne in current_nes:
+                        choices.append((c_ne, c_ne))
+                    for n in disponibles:
+                        if n not in current_nes:
+                            choices.append((n, n))
+                    self.fields['numero_entrada'].choices = choices
+                self.initial['numero_entrada'] = current_nes
         else:
-            if not self.is_bound:
+            if self.instance and self.instance.pk:
+                self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(
+                    Q(cantidad_disponible__gt=0) | Q(pk=self.instance.MATERIALES_id_material.pk)
+                )
+                m = self.instance.MATERIALES_id_material
+                disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
+                current_ne = self.instance.numero_entrada
+                current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+                
+                choices = []
+                for c_ne in current_nes:
+                    choices.append((c_ne, c_ne))
+                for n in disponibles:
+                    if n not in current_nes:
+                        choices.append((n, n))
+                
+                self.fields['numero_entrada'].choices = choices
+                self.initial['numero_entrada'] = current_nes
+            else:
                 self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(cantidad_disponible__gt=0)
                 self.fields['numero_entrada'].choices = []
 
     def clean(self):
         cleaned_data = super().clean()
+        alumno = cleaned_data.get('ALUMNOS_id_alumno')
         material = cleaned_data.get('MATERIALES_id_material')
         cantidad = cleaned_data.get('cantidad')
         ne_list = cleaned_data.get('numero_entrada')
+
+        if alumno:
+            if not alumno.carnet_activo:
+                self.add_error('ALUMNOS_id_alumno', "El alumno no tiene un carnet activo.")
+            elif alumno.carnet_expirado:
+                self.add_error('ALUMNOS_id_alumno', "El carnet del alumno está expirado. Debe ser reactivado.")
 
         if material:
             disp = material.cantidad_disponible

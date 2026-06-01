@@ -76,52 +76,49 @@ tipo2, _ = TipoDocumento.objects.get_or_create(descripcion="Revista Científica"
 print("Parámetros base creados.")
 
 # 5. Crear Materiales (Inventario)
-mat1, _ = Material.objects.get_or_create(
+mat1, mat1_created = Material.objects.get_or_create(
     titulo="Cien años de soledad",
     defaults={
-        "autores_id_autor": autor1,
         "editoriales_id_editorial": editorial1,
         "categorias_id_categoria": cat1,
         "tipodocumento_id_tipo": tipo1,
         "isbn": "978-0307474728",
         "año_publicacion": 1967,
         "cantidad_total": 5,
-        "cantidad_disponible": 5,
-        "ubicacion_fisica": "Estante A1 - Literatura"
+        "cantidad_disponible": 5
     }
 )
+mat1.autores_id_autor.add(autor1)
 mat1.generos.add(gen1)
 
-mat2, _ = Material.objects.get_or_create(
+mat2, mat2_created = Material.objects.get_or_create(
     titulo="Harry Potter y la piedra filosofal",
     defaults={
-        "autores_id_autor": autor2,
         "editoriales_id_editorial": editorial2,
         "categorias_id_categoria": cat2,
         "tipodocumento_id_tipo": tipo1,
         "isbn": "978-8478884452",
         "año_publicacion": 1997,
         "cantidad_total": 3,
-        "cantidad_disponible": 3,
-        "ubicacion_fisica": "Estante B2 - Fantasía"
+        "cantidad_disponible": 3
     }
 )
+mat2.autores_id_autor.add(autor2)
 mat2.generos.add(gen2)
 
-mat3, _ = Material.objects.get_or_create(
+mat3, mat3_created = Material.objects.get_or_create(
     titulo="Código Limpio (Clean Code)",
     defaults={
-        "autores_id_autor": autor3,
         "editoriales_id_editorial": editorial3,
         "categorias_id_categoria": cat3,
         "tipodocumento_id_tipo": tipo1,
         "isbn": "978-0132350884",
         "año_publicacion": 2008,
         "cantidad_total": 4,
-        "cantidad_disponible": 4,
-        "ubicacion_fisica": "Estante C3 - Tecnología"
+        "cantidad_disponible": 4
     }
 )
+mat3.autores_id_autor.add(autor3)
 mat3.generos.add(gen3)
 print("Materiales en el acervo creados.")
 

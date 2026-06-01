@@ -385,10 +385,18 @@
 
                     <div class="row g-2 mt-2">
                         <!-- TITULO DE GRADO -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label-custom">TITULO DE GRADO <span class="text-asterisk">*</span></label>
                             {{ form.titulo_grado }}
                             {% for error in form.titulo_grado.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- CANTIDAD -->
+                        <div class="col-md-2">
+                            <label class="form-label-custom">CANTIDAD <span class="text-asterisk">*</span></label>
+                            {{ form.cantidad_total }}
+                            {% for error in form.cantidad_total.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
@@ -414,7 +422,7 @@
                             {% endfor %}
                         </div>
                         <!-- FECHA INGRESO -->
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label-custom">FECHA INGRESO <span class="text-asterisk">*</span></label>
                             {{ form.fecha_ingreso }}
                             {% for error in form.fecha_ingreso.errors %}
@@ -446,7 +454,7 @@
 
                     <div class="row g-2 mt-2">
                         <!-- TIPO DE MATERIAL -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label-custom">TIPO DE MATERIAL <span class="text-asterisk">*</span></label>
                             <div class="d-flex gap-1 align-items-center">
                                 <div class="flex-grow-1" style="min-width: 0;">
@@ -461,10 +469,18 @@
                             {% endfor %}
                         </div>
                         <!-- AÑO DE PUBLICACIÓN -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label-custom">AÑO DE PUBLICACIÓN <span class="text-asterisk">*</span></label>
                             {{ form.año_publicacion }}
                             {% for error in form.año_publicacion.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <!-- CANTIDAD -->
+                        <div class="col-md-2">
+                            <label class="form-label-custom">CANTIDAD <span class="text-asterisk">*</span></label>
+                            {{ form.cantidad_total }}
+                            {% for error in form.cantidad_total.errors %}
                                 <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>

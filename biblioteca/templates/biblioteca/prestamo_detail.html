@@ -1,0 +1,284 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header con botón Volver -->
+        <div class="page-title-area mb-4">
+            <div>
+                <h1 class="page-title">Detalle del Préstamo #{{ prestamo.id_prestamo }}</h1>
+                <p class="page-subtitle">Información exhaustiva del préstamo y estado de circulación</p>
+            </div>
+            <a href="{% url 'prestamo-list' %}" class="btn btn-light border px-3">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Historial
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <!-- Columna principal (Detalle del Préstamo y Material) -->
+            <div class="col-md-7">
+                <!-- Tarjeta: Información de Préstamo -->
+                <div class="card-custom mb-4">
+                    <div class="card-header-custom d-flex justify-content-between align-items-center bg-white">
+                        <span class="text-dark fw-bold"><i class="fas fa-info-circle me-2 text-primary"></i>Datos del Préstamo</span>
+                        <div>
+                            {% if prestamo.estado == 'ACTIVO' %}
+                                <span class="badge badge-custom badge-soft-warning">
+                                    <i class="fas fa-clock me-1"></i> Activo
+                                </span>
+                            {% elif prestamo.estado == 'DEVUELTO' %}
+                                <span class="badge badge-custom badge-soft-success">
+                                    <i class="fas fa-check me-1"></i> Devuelto
+                                </span>
+                            {% else %}
+                                <span class="badge badge-custom badge-soft-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Vencido
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Fecha de Préstamo</label>
+                                <div class="text-dark fw-semibold fs-5">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Fecha de Vencimiento</label>
+                                <div class="text-dark fw-semibold fs-5">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Cantidad Prestada</label>
+                                <div class="text-dark fw-bold fs-5">{{ prestamo.cantidad }} unidad(es)</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">¿Prorrogado?</label>
+                                <div>
+                                    {% if prestamo.prorrogado %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-history me-1"></i> Sí (Prorrogado)</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-muted border">No</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if prestamo.numero_entrada %}
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Ejemplar(es) / N° de Entrada</label>
+                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                    {% for ne in prestamo.lista_numero_entrada %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1.5 font-monospace fs-6">N° {{ ne }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="col-12">
+                                <hr class="opacity-25">
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Atendido por</label>
+                                <div class="text-dark"><i class="fas fa-user-tie me-2 opacity-75"></i>{{ prestamo.administrador_usuariosbibliosoft_id.get_full_name|default:prestamo.administrador_usuariosbibliosoft_id.username }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta: Información del Material -->
+                <div class="card-custom">
+                    <div class="card-header-custom bg-white">
+                        <span class="text-dark fw-bold"><i class="fas fa-book me-2 text-primary"></i>Material Prestado</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <h4 class="text-dark fw-bold mb-3">{{ prestamo.MATERIALES_id_material.titulo }}</h4>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Autor(es)</label>
+                                <div class="text-dark fw-medium">{{ prestamo.MATERIALES_id_material.autor }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Editorial</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.editorial|default:"—" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Categoría</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.categoria|default:"—" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Tipo Registro</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.get_tipo_registro_display|default:prestamo.MATERIALES_id_material.tipo_registro }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Dewey</label>
+                                <div class="text-dark font-monospace">{{ prestamo.MATERIALES_id_material.numeracion_dewey|default:"—" }}</div>
+                            </div>
+                            {% if prestamo.MATERIALES_id_material.isbn %}
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">ISBN</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.isbn }}</div>
+                            </div>
+                            {% endif %}
+                            {% if prestamo.MATERIALES_id_material.issn %}
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">ISSN</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.issn }}</div>
+                            </div>
+                            {% endif %}
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Año Publicación</label>
+                                <div class="text-dark">{{ prestamo.MATERIALES_id_material.año_publicacion|default:"—" }}</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna lateral (Alumno y Acciones de Devolución) -->
+            <div class="col-md-5">
+                <!-- Tarjeta: Datos del Alumno -->
+                <div class="card-custom mb-4">
+                    <div class="card-header-custom bg-white">
+                        <span class="text-dark fw-bold"><i class="fas fa-user-graduate me-2 text-primary"></i>Datos del Lector (Alumno)</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.25rem;">
+                                    {{ prestamo.ALUMNOS_id_alumno.nombre|slice:":1" }}{{ prestamo.ALUMNOS_id_alumno.apellido|slice:":1" }}
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="text-dark fw-bold mb-0">{{ prestamo.ALUMNOS_id_alumno.nombre }} {{ prestamo.ALUMNOS_id_alumno.apellido }}</h5>
+                                <span class="text-muted small">Cédula: {{ prestamo.ALUMNOS_id_alumno.numero_documento|default:prestamo.ALUMNOS_id_alumno.matricula }}</span>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Carrera</label>
+                                <div class="text-dark fw-medium">{{ prestamo.ALUMNOS_id_alumno.carreras_id_carrera.nombre }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Curso</label>
+                                <div class="text-dark">{{ prestamo.ALUMNOS_id_alumno.curso|default:"—" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Lector N°</label>
+                                <div class="text-dark">{{ prestamo.ALUMNOS_id_alumno.lector_numero|default:"—" }}</div>
+                            </div>
+                            <div class="col-12">
+                                <hr class="opacity-25 my-1">
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Contacto</label>
+                                <div class="text-dark mb-1"><i class="fas fa-envelope me-2 opacity-75 text-muted"></i>{{ prestamo.ALUMNOS_id_alumno.email }}</div>
+                                <div class="text-dark"><i class="fas fa-phone me-2 opacity-75 text-muted"></i>{{ prestamo.ALUMNOS_id_alumno.telefono }}</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Carnet de Biblioteca</label>
+                                <div>
+                                    {% if prestamo.ALUMNOS_id_alumno.carnet_expirado %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-exclamation-circle me-1"></i>Expirado</span>
+                                        {% if prestamo.ALUMNOS_id_alumno.carnet_fecha_entrega %}
+                                            <span class="text-muted small ms-1">(Entregado: {{ prestamo.ALUMNOS_id_alumno.carnet_fecha_entrega|date:"d/m/Y" }})</span>
+                                        {% endif %}
+                                    {% elif prestamo.ALUMNOS_id_alumno.carnet_activo %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-id-card me-1"></i>Activo</span>
+                                        {% if prestamo.ALUMNOS_id_alumno.carnet_fecha_entrega %}
+                                            <span class="text-muted small ms-1">(Entregado: {{ prestamo.ALUMNOS_id_alumno.carnet_fecha_entrega|date:"d/m/Y" }})</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fas fa-times-circle me-1"></i>Inactivo / No Entregado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta: Datos de Devolución (Solo si está DEVUELTO) -->
+                {% if prestamo.estado == 'DEVUELTO' and prestamo.devolucion %}
+                <div class="card-custom mb-4 border-success">
+                    <div class="card-header-custom bg-success-subtle text-success text-success-emphasis">
+                        <span class="fw-bold"><i class="fas fa-check-double me-2"></i>Información de Devolución</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Fecha Retorno</label>
+                                <div class="text-dark fw-bold fs-5">{{ prestamo.devolucion.fecha_devolucion|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Estado Recepción</label>
+                                <div>
+                                    {% if prestamo.devolucion.estado_material == 'BUENO' %}
+                                        <span class="badge bg-success">Bueno</span>
+                                    {% elif prestamo.devolucion.estado_material == 'REGULAR' %}
+                                        <span class="badge bg-warning text-dark">Regular</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Malo</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">Multa Recargo</label>
+                                <div class="text-dark fw-bold">{{ prestamo.devolucion.multa }} Gs.</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small fw-semibold text-uppercase">¿Multa Pagada?</label>
+                                <div>
+                                    {% if prestamo.devolucion.multa > 0 %}
+                                        {% if prestamo.devolucion.pago_multa %}
+                                            <span class="badge bg-success"><i class="fas fa-coins me-1"></i> Sí, Pagado</span>
+                                        {% else %}
+                                            <span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i> Pendiente de Pago</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-light text-muted border">No Aplica</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if prestamo.devolucion.observaciones %}
+                            <div class="col-12">
+                                <label class="text-muted small fw-semibold text-uppercase">Observaciones de Devolución</label>
+                                <div class="text-dark bg-light p-2 rounded small border">{{ prestamo.devolucion.observaciones }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tarjeta: Acciones Rápidas (Para préstamos activos/vencidos) -->
+                {% if prestamo.estado == 'ACTIVO' or prestamo.estado == 'VENCIDO' %}
+                <div class="card-custom">
+                    <div class="card-header-custom bg-white">
+                        <span class="text-dark fw-bold"><i class="fas fa-bolt me-2 text-primary"></i>Acciones Disponibles</span>
+                    </div>
+                    <div class="card-body p-4 d-grid gap-3">
+                        <a href="{% url 'devolucion-create' %}?prestamo={{ prestamo.id_prestamo }}" class="btn btn-success d-flex align-items-center justify-content-center gap-2 py-2.5 fw-semibold shadow-sm">
+                            <i class="fas fa-undo"></i> Registrar Devolución
+                        </a>
+                        
+                        <form action="{% url 'prestamo-prorroga' prestamo.id_prestamo %}" method="post" class="m-0 d-grid">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning d-flex align-items-center justify-content-center gap-2 py-2.5 fw-semibold text-dark shadow-sm">
+                                <i class="fas fa-history"></i> Conceder Prórroga (2 días)
+                            </button>
+                        </form>
+
+                        <a href="{% url 'prestamo-update' prestamo.id_prestamo %}" class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2 py-2.5 fw-semibold">
+                            <i class="fas fa-edit"></i> Editar Préstamo
+                        </a>
+
+                        {% if prestamo.estado == 'ACTIVO' %}
+                        <a href="{% url 'prestamo-delete' prestamo.id_prestamo %}" class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2 py-2.5 fw-semibold">
+                            <i class="fas fa-trash-alt"></i> Eliminar Préstamo
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

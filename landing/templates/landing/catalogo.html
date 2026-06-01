@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Catálogo Público - Bibliosoft</title>
     <link rel="icon" type="image/png" href="{% static 'images/logo_uci.png' %}">
     <meta name="description" content="Explora el catálogo completo de la Biblioteca Dr. Jesús René Haurón Acuña — Universidad Católica Campus Itapúa.">
@@ -120,7 +120,7 @@
             border-radius: 8px;
             border: 1px solid var(--border);
             padding: 0.6rem 0.8rem;
-            font-size: 0.9rem;
+            font-size: 16px; /* Evita el zoom automático en iOS Safari al tener al menos 16px */
             color: var(--text);
             background-color: #f8fafc;
             transition: all 0.2s;
@@ -142,15 +142,44 @@
             display: flex;
             flex-direction: column;
         }
+        @media (min-width: 768px) {
+            .material-card {
+                flex-direction: row;
+            }
+        }
         .material-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 12px 24px rgba(0,78,162,0.08);
+        }
+        .card-side-panel {
+            background-color: #f8fafc;
+            border-right: 1px solid var(--border);
+            width: 140px;
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        @media (max-width: 767.98px) {
+            .card-side-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.5rem;
+            }
         }
         .material-body {
             padding: 1.5rem;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
         }
         .material-icon-wrapper {
             width: 48px;
@@ -162,7 +191,6 @@
             align-items: center;
             justify-content: center;
             font-size: 1.25rem;
-            margin-bottom: 1.25rem;
         }
         .material-title {
             font-size: 1.15rem;
@@ -179,15 +207,18 @@
         .meta-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
             font-size: 0.8rem;
-            margin-bottom: 1.25rem;
+            margin-bottom: 0;
             border-top: 1px solid var(--border);
             padding-top: 1rem;
         }
         .meta-item {
             display: flex;
             flex-direction: column;
+        }
+        .meta-item.span-2 {
+            grid-column: span 2;
         }
         .meta-label {
             color: var(--muted);
@@ -197,6 +228,8 @@
         .meta-value {
             color: var(--text);
             font-weight: 600;
+            white-space: normal;
+            word-break: break-word;
         }
         .badge-status {
             padding: 0.4rem 0.8rem;
@@ -206,7 +239,6 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            margin-top: auto;
             width: fit-content;
         }
         .badge-disponible {
@@ -261,14 +293,14 @@
             border: none !important;
             background: transparent !important;
             padding: 0.6rem 0.8rem !important;
-            font-size: 0.9rem !important;
+            font-size: 16px !important; /* Evita zoom automático en iOS */
             color: var(--text) !important;
             min-height: auto !important;
             height: auto !important;
             border-radius: 8px !important;
         }
         .ts-control input {
-            font-size: 0.9rem !important;
+            font-size: 16px !important;
         }
         .ts-dropdown {
             border: 1px solid var(--border) !important;
@@ -306,6 +338,14 @@
         .ts-wrapper .clear-button:hover {
             color: #1e293b !important;
             opacity: 1 !important;
+        }
+        /* Ajuste específico para celulares (pantallas pequeñas) */
+        @media (max-width: 767.98px) {
+            .ts-wrapper .clear-button {
+                font-size: 1.6rem !important; /* Más grande en móviles */
+                padding: 4px 8px !important;    /* Mayor área táctil para facilitar el clic */
+                margin-right: 4px !important;
+            }
         }
     </style>
 </head>
@@ -425,6 +465,17 @@
                             </select>
                         </div>
 
+                        <!-- Ordenamiento -->
+                        <div class="mb-3">
+                            <label class="form-label" for="filterOrden">Ordenar por</label>
+                            <select name="orden" id="filterOrden" class="form-select">
+                                <option value="">Por defecto</option>
+                                <option value="reciente" {% if selected_orden == 'reciente' %}selected{% endif %}>Por año más reciente</option>
+                                <option value="antiguo" {% if selected_orden == 'antiguo' %}selected{% endif %}>Por año más antiguo</option>
+                                <option value="agregado" {% if selected_orden == 'agregado' %}selected{% endif %}>Agregado recientemente</option>
+                            </select>
+                        </div>
+
                         <!-- Disponibilidad -->
                         <div class="mb-4">
                             <div class="form-check form-switch">
@@ -436,7 +487,7 @@
                         <!-- Resetear -->
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary btn-sm rounded-pill py-2 fw-semibold" style="background-color: var(--primary); border: none;">Aplicar Filtros</button>
-                            <a href="{% url 'catalogo_publico' %}" class="btn btn-outline-secondary btn-sm rounded-pill py-2 fw-semibold">Limpiar todo</a>
+                            <button type="button" id="btnReset" class="btn btn-outline-secondary btn-sm rounded-pill py-2 fw-semibold">Limpiar todo</button>
                         </div>
                     </form>
                 </div>
@@ -451,51 +502,23 @@
                 {% if materiales %}
                     <div class="row g-4">
                         {% for mat in materiales %}
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-12 col-md-6">
                                 <div class="material-card">
-                                    <div class="material-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="material-icon-wrapper">
-                                                {% if mat.tipo_documento.descripcion|lower == 'libro' %}
-                                                    <i class="fas fa-book"></i>
-                                                {% elif mat.tipo_documento.descripcion|lower == 'tesis' %}
-                                                    <i class="fas fa-graduation-cap"></i>
-                                                {% elif mat.tipo_documento.descripcion|lower == 'revista' %}
-                                                    <i class="fas fa-journal-whills"></i>
-                                                {% else %}
-                                                    <i class="fas fa-file-alt"></i>
-                                                {% endif %}
-                                            </div>
-                                            <span class="badge badge-status badge-format">{{ mat.tipo_documento.descripcion }}</span>
+                                    <!-- Side Panel -->
+                                    <div class="card-side-panel">
+                                        <div class="material-icon-wrapper mb-3">
+                                            {% if mat.tipo_documento.descripcion|lower == 'libro' %}
+                                                <i class="fas fa-book"></i>
+                                            {% elif mat.tipo_documento.descripcion|lower == 'tesis' %}
+                                                <i class="fas fa-graduation-cap"></i>
+                                            {% elif mat.tipo_documento.descripcion|lower == 'revista' %}
+                                                <i class="fas fa-journal-whills"></i>
+                                            {% else %}
+                                                <i class="fas fa-file-alt"></i>
+                                            {% endif %}
                                         </div>
-
-                                        <h3 class="material-title">{{ mat.titulo }}</h3>
-                                        <p class="material-author">por <span class="fw-semibold">{{ mat.autor }}</span></p>
-
-                                        <div class="meta-grid">
-                                            <div class="meta-item">
-                                                <span class="meta-label">Género</span>
-                                                <span class="meta-value text-truncate" title="{{ mat.generos.all|join:', ' }}">{{ mat.generos.all|join:", "|default:"—" }}</span>
-                                            </div>
-                                            <div class="meta-item">
-                                                <span class="meta-label">Disponibles</span>
-                                                <span class="meta-value fw-bold text-primary">{{ mat.cantidad_disponible }} un.</span>
-                                            </div>
-                                            <div class="meta-item">
-                                                <span class="meta-label">Editorial</span>
-                                                <span class="meta-value text-truncate" title="{{ mat.editorial.nombre }}">{{ mat.editorial.nombre|default:"—" }}</span>
-                                            </div>
-                                            <div class="meta-item">
-                                                <span class="meta-label">Año</span>
-                                                <span class="meta-value">{{ mat.año_publicacion|default:"—" }}</span>
-                                            </div>
-                                            <div class="meta-item">
-                                                <span class="meta-label">ISBN/Código</span>
-                                                <span class="meta-value text-truncate" title="{{ mat.isbn|default:'S/N' }}">{{ mat.isbn|default:"S/N" }}</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                                        <span class="badge badge-status badge-format mb-3">{{ mat.tipo_documento.descripcion }}</span>
+                                        <div class="mt-md-auto">
                                             {% if mat.cantidad_disponible > 0 %}
                                                 <span class="badge badge-status badge-disponible">
                                                     <i class="fas fa-check-circle"></i> Disponible
@@ -505,6 +528,37 @@
                                                     <i class="fas fa-times-circle"></i> Sin stock
                                                 </span>
                                             {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Main Body -->
+                                    <div class="material-body">
+                                        <div>
+                                            <h3 class="material-title">{{ mat.titulo }}</h3>
+                                            <p class="material-author">por <span class="fw-semibold">{{ mat.autor }}</span></p>
+                                        </div>
+
+                                        <div class="meta-grid">
+                                            <div class="meta-item">
+                                                <span class="meta-label">Género</span>
+                                                <span class="meta-value" title="{{ mat.generos.all|join:', ' }}">{{ mat.generos.all|join:", "|default:"—" }}</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <span class="meta-label">Disponibles</span>
+                                                <span class="meta-value fw-bold text-primary">{{ mat.cantidad_disponible }} un.</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <span class="meta-label">Editorial</span>
+                                                <span class="meta-value" title="{{ mat.editorial.nombre }}">{{ mat.editorial.nombre|default:"—" }}</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <span class="meta-label">Año</span>
+                                                <span class="meta-value">{{ mat.año_publicacion|default:"—" }}</span>
+                                            </div>
+                                            <div class="meta-item span-2">
+                                                <span class="meta-label">ISBN/Código</span>
+                                                <span class="meta-value" title="{{ mat.isbn|default:'S/N' }}">{{ mat.isbn|default:"S/N" }}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -604,32 +658,77 @@
         const autorSelect = document.getElementById('filterAutor');
         const editorialSelect = document.getElementById('filterEditorial');
 
+        let tsGenero, tsAutor, tsEditorial;
+
         if (generoSelect) {
-            new TomSelect(generoSelect, {
+            tsGenero = new TomSelect(generoSelect, {
                 ...config,
                 placeholder: "Seleccione una opción..."
             });
         }
         if (autorSelect) {
-            new TomSelect(autorSelect, {
+            tsAutor = new TomSelect(autorSelect, {
                 ...config,
                 placeholder: "Seleccione una opción..."
             });
         }
         if (editorialSelect) {
-            new TomSelect(editorialSelect, {
+            tsEditorial = new TomSelect(editorialSelect, {
                 ...config,
                 placeholder: "Seleccione una opción..."
             });
         }
 
-        // Listen for standard select changes (Facultad, Carrera, and Disponible switch)
+        // Listen for standard select changes (Facultad, Carrera, Disponible switch, and Orden select)
         // Using event delegation on the form because Carrera is replaced dynamically
         if (form) {
             form.addEventListener('change', function(e) {
-                if (e.target.id === 'filterFacultad' || e.target.id === 'filterCarrera' || e.target.id === 'filterDisponible') {
+                if (e.target.id === 'filterFacultad' || e.target.id === 'filterCarrera' || e.target.id === 'filterDisponible' || e.target.id === 'filterOrden') {
                     updateCatalog();
                 }
+            });
+        }
+
+        // Limpiar todo dinámicamente mediante JS sin refrescar la página
+        const btnReset = document.getElementById('btnReset');
+        if (btnReset && form) {
+            btnReset.addEventListener('click', function() {
+                // 1. Limpiar el input de texto de búsqueda
+                const queryInput = document.getElementById('searchQuery');
+                if (queryInput) queryInput.value = '';
+
+                // 2. Limpiar selects normales
+                const selects = ['filterFacultad', 'filterCarrera', 'filterOrden'];
+                selects.forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (sel) sel.value = '';
+                });
+
+                // 3. Limpiar checkbox/switch de disponible
+                const checkDisponible = document.getElementById('filterDisponible');
+                if (checkDisponible) checkDisponible.checked = false;
+
+                // 4. Limpiar instancias de TomSelect
+                if (tsGenero) tsGenero.clear();
+                if (tsAutor) tsAutor.clear();
+                if (tsEditorial) tsEditorial.clear();
+
+                // 5. Actualizar el listado mediante la petición AJAX existente
+                updateCatalog();
+            });
+        }
+
+        // Cerrar el menú colapsable al hacer clic en enlaces de navegación interna (Inicio o Servicios)
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        const menuCollapse = document.getElementById('navbarNav');
+        if (menuCollapse) {
+            const bsCollapse = new bootstrap.Collapse(menuCollapse, { toggle: false });
+            navLinks.forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (menuCollapse.classList.contains('show')) {
+                        bsCollapse.hide();
+                    }
+                });
             });
         }
     });

@@ -117,8 +117,18 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
+                                    <a class="dropdown-item text-info" href="{% url 'material-detail' material.id_material %}">
+                                        <i class="fas fa-info-circle me-2"></i> Detalles
+                                    </a>
+                                </li>
+                                <li>
                                     <a class="dropdown-item text-primary" href="{% url 'material-update' material.id_material %}">
                                         <i class="fas fa-edit me-2"></i> Editar
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-warning" href="{% url 'material-baja' material.id_material %}">
+                                        <i class="fas fa-arrow-alt-circle-down me-2"></i> Dar de Baja
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>

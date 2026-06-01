@@ -92,8 +92,8 @@
                                 <form action="{% url 'reporte-print' %}" method="get" target="_blank" class="d-flex flex-column gap-2 align-items-center justify-content-center mx-auto" style="max-width: 250px;">
                                     <input type="hidden" name="tipo" value="acervo_carrera">
                                     <div class="w-100">
-                                        <select name="carrera" required class="form-select form-select-sm" style="font-size: 0.85rem;">
-                                            <option value="">Selecciona</option>
+                                        <select name="carrera" id="carrera-acervo" required class="form-select form-select-sm" style="font-size: 0.85rem;">
+                                            <option value="">Escriba la carrera...</option>
                                             {% for carrera in carreras %}
                                                 <option value="{{ carrera.pk }}">{{ carrera.nombre }}</option>
                                             {% endfor %}
@@ -115,8 +115,8 @@
                                 <form action="{% url 'reporte-print' %}" method="get" target="_blank" class="d-flex flex-column gap-2 align-items-center justify-content-center mx-auto" style="max-width: 250px;">
                                     <input type="hidden" name="tipo" value="investigacion_carrera">
                                     <div class="w-100">
-                                        <select name="carrera" required class="form-select form-select-sm" style="font-size: 0.85rem;">
-                                            <option value="">Selecciona</option>
+                                        <select name="carrera" id="carrera-investigacion" required class="form-select form-select-sm" style="font-size: 0.85rem;">
+                                            <option value="">Escriba la carrera...</option>
                                             {% for carrera in carreras %}
                                                 <option value="{{ carrera.pk }}">{{ carrera.nombre }}</option>
                                             {% endfor %}
@@ -134,6 +134,31 @@
         </div>
     </div>
 </div>
+
+<!-- Include Tom Select CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const config = {
+            create: false,
+            placeholder: "Escriba o seleccione carrera...",
+            allowEmptyOption: false,
+            maxOptions: 100,
+            onItemAdd: function() {
+                this.setTextboxValue('');
+                this.refreshOptions(false);
+            }
+        };
+        try {
+            new TomSelect("#carrera-acervo", config);
+            new TomSelect("#carrera-investigacion", config);
+        } catch (e) {
+            console.error("Error initializing TomSelect:", e);
+        }
+    });
+</script>
 
 <style>
     /* Estilo premium para el botón de imprimir que coincide con el mockup de la impresora */
@@ -178,6 +203,51 @@
     .table .form-select-sm:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 0.15rem rgba(0, 78, 162, 0.15);
+    }
+
+    /* Styling tweaks for Tom Select in table reports to match input size */
+    .ts-wrapper.form-select-sm {
+        border: 1px solid #ced4da !important;
+        border-radius: 4px !important;
+        padding: 0 !important;
+        background-color: var(--white) !important;
+        box-shadow: none !important;
+    }
+    .ts-wrapper.form-select-sm.focus,
+    .ts-wrapper.form-select-sm.input-active {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 0.15rem rgba(0, 78, 162, 0.15) !important;
+    }
+    .ts-wrapper.form-select-sm .ts-control {
+        border: none !important;
+        background: none !important;
+        padding: 0.35rem 2rem 0.35rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        color: var(--text) !important;
+    }
+    .ts-wrapper.form-select-sm.single .ts-control {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23495057' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.75rem center !important;
+        background-size: 14px 10px !important;
+    }
+    .ts-dropdown {
+        border: 1px solid var(--border) !important;
+        border-radius: 6px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        margin-top: 4px !important;
+        padding: 4px !important;
+        z-index: 1000 !important;
+    }
+    .ts-dropdown .option {
+        padding: 6px 10px !important;
+        border-radius: 4px !important;
+        font-size: 0.85rem !important;
+        text-align: left;
+    }
+    .ts-dropdown .active {
+        background-color: rgba(0, 78, 162, 0.08) !important;
+        color: var(--primary) !important;
     }
 </style>
 {% endblock %}

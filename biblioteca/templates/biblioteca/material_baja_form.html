@@ -1,0 +1,175 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="page-title-area mb-4">
+            <div>
+                <h1 class="page-title">{{ title }}</h1>
+                <p class="page-subtitle">{{ subtitle }}</p>
+            </div>
+        </div>
+
+        <style>
+            /* Quitar flechas del input number */
+            #id_cantidad::-webkit-outer-spin-button,
+            #id_cantidad::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            #id_cantidad {
+                -moz-appearance: textfield;
+                appearance: textfield;
+            }
+        </style>
+
+        <div class="row g-4">
+            <!-- Columna lateral: Info del Material -->
+            <div class="col-md-4">
+                <div class="card-custom bg-white">
+                    <div class="card-header-custom">
+                        <span class="text-dark fw-bold"><i class="fas fa-book me-2 text-primary"></i>Datos del Inventario</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <h6 class="text-muted small fw-bold text-uppercase mb-1">Título</h6>
+                        <p class="text-dark fw-semibold mb-3">{{ material.titulo }}</p>
+                        
+                        <h6 class="text-muted small fw-bold text-uppercase mb-1">Autor(es)</h6>
+                        <p class="text-dark mb-3">{{ material.autor }}</p>
+
+                        <h6 class="text-muted small fw-bold text-uppercase mb-1">Stock Disponible</h6>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="fs-4 fw-bold text-primary">{{ material.cantidad_disponible }}</span>
+                            <span class="text-muted ms-1">/ {{ material.cantidad_total }} total</span>
+                        </div>
+
+                        {% if material.numeros_entrada_disponibles %}
+                        <h6 class="text-muted small fw-bold text-uppercase mb-1">Ejemplares Disponibles</h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for n in material.numeros_entrada_disponibles %}
+                                <span class="badge bg-light text-dark border font-monospace">N° {{ n }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna principal: Formulario de Baja -->
+            <div class="col-md-8">
+                <div class="card-custom">
+                    <div class="card-body p-4 p-md-5">
+                        <form method="post" class="needs-validation" novalidate id="baja-form">
+                            {% csrf_token %}
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger mb-4 shadow-sm" role="alert">
+                                    {% for error in form.non_field_errors %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-exclamation-circle me-2"></i>
+                                            <span>{{ error }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <div class="row g-4">
+                                <!-- Ejemplar / Número de Entrada (si aplica) -->
+                                {% if form.numero_entrada.field.widget.input_type != 'hidden' %}
+                                <div class="col-12">
+                                    <label for="{{ form.numero_entrada.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.numero_entrada.label }}</label>
+                                    {{ form.numero_entrada }}
+                                    <div class="form-text text-muted small mt-1">
+                                        (Obligatorio) Seleccione el/los ejemplares a dar de baja. Mantenga presionado Ctrl + Click para seleccionar varios.
+                                    </div>
+                                    {% for error in form.numero_entrada.errors %}
+                                        <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                    {{ form.numero_entrada }}
+                                {% endif %}
+
+                                <!-- Cantidad a dar de baja -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.cantidad.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.cantidad.label }}</label>
+                                    {{ form.cantidad }}
+                                    {% for error in form.cantidad.errors %}
+                                        <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Motivo de la baja -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.motivo.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.motivo.label }}</label>
+                                    {{ form.motivo }}
+                                    {% for error in form.motivo.errors %}
+                                        <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Observaciones -->
+                                <div class="col-12">
+                                    <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.observaciones.label }}</label>
+                                    {{ form.observaciones }}
+                                    <div class="form-text text-muted small mt-1">
+                                        Detalle el incidente o contexto de la baja (p. ej. "Ejemplar mojado por lluvia", "Nunca devuelto por alumno de baja", etc.).
+                                    </div>
+                                    {% for error in form.observaciones.errors %}
+                                        <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <hr class="my-5 opacity-25">
+                            
+                            <div class="d-flex justify-content-end gap-3">
+                                <a href="{% url 'material-list' %}" class="btn btn-light border px-4">Cancelar</a>
+                                <button type="submit" class="btn btn-danger px-5">
+                                    <i class="fas fa-arrow-alt-circle-down me-2"></i> Confirmar Baja
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectNe = document.getElementById("id_numero_entrada");
+        const inputCant = document.getElementById("id_cantidad");
+
+        if (selectNe && inputCant) {
+            // Prevent scrolling on number input from changing its value
+            inputCant.addEventListener('wheel', function(e) {
+                e.preventDefault();
+            });
+
+            selectNe.addEventListener("change", function() {
+                // Count selected options
+                let count = 0;
+                for (let i = 0; i < selectNe.options.length; i++) {
+                    if (selectNe.options[i].selected) {
+                        count++;
+                    }
+                }
+                
+                if (count > 0) {
+                    inputCant.value = count;
+                    inputCant.setAttribute("readonly", "readonly");
+                    inputCant.classList.add("bg-light");
+                } else {
+                    inputCant.value = 1;
+                    inputCant.removeAttribute("readonly");
+                    inputCant.classList.remove("bg-light");
+                }
+            });
+            // Trigger change on load to set initial state
+            selectNe.dispatchEvent(new Event("change"));
+        }
+    });
+</script>
+{% endblock %}

@@ -18,6 +18,7 @@ def catalogo(request):
     facultad_id = request.GET.get('facultad', '')
     editorial_id = request.GET.get('editorial', '')
     solo_disponibles = request.GET.get('disponible', '')
+    orden = request.GET.get('orden', '')
 
     materiales = Material.objects.all().select_related(
         'editoriales_id_editorial',
@@ -52,6 +53,14 @@ def catalogo(request):
     if solo_disponibles == '1':
         materiales = materiales.filter(cantidad_disponible__gt=0)
 
+    # Ordenamiento
+    if orden == 'reciente':
+        materiales = materiales.order_by('-año_publicacion')
+    elif orden == 'antiguo':
+        materiales = materiales.order_by('año_publicacion')
+    elif orden == 'agregado':
+        materiales = materiales.order_by('-id_material')
+
     # Fetch choices for filtering dropdowns
     generos = Genero.objects.all()
     autores = Autor.objects.all()
@@ -79,6 +88,7 @@ def catalogo(request):
         'selected_facultad': int(facultad_id) if facultad_id.isdigit() else None,
         'selected_editorial': int(editorial_id) if editorial_id.isdigit() else None,
         'solo_disponibles': solo_disponibles == '1',
+        'selected_orden': orden,
     }
     return render(request, 'landing/catalogo.html', context)
 

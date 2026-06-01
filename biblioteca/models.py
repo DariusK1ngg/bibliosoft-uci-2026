@@ -144,6 +144,15 @@ class Alumno(models.Model):
     def tiene_prestamos(self):
         return self.prestamo_set.exists()
 
+    @property
+    def carnet_expirado(self):
+        if not self.carnet_activo or not self.carnet_fecha_entrega:
+            return False
+        from django.utils import timezone
+        import datetime
+        limit = timezone.localdate() - datetime.timedelta(days=365)
+        return self.carnet_fecha_entrega < limit
+
     def save(self, *args, **kwargs):
         # Sincronizar matricula con numero_documento
         if not self.matricula and self.numero_documento:
@@ -178,7 +187,7 @@ class Material(models.Model):
     año_publicacion = models.IntegerField(null=True, blank=True, verbose_name='Año de Publicación')
     cantidad_total = models.IntegerField(default=1, verbose_name='Cantidad Total')
     cantidad_disponible = models.IntegerField(default=1, verbose_name='Cantidad Disponible')
-    ubicacion_fisica = models.CharField(max_length=100, null=True, blank=True, verbose_name='Ubicación Física')
+
 
     # Nuevos campos solicitados
     numeracion_dewey = models.CharField(max_length=50, null=True, blank=True, verbose_name='Numeración Dewey')
@@ -282,6 +291,51 @@ class MaterialGenero(models.Model):
         verbose_name_plural = 'Materiales - Géneros'
 
 
+class BajaMaterial(models.Model):
+    MOTIVOS = [
+        ('MOJADO', 'Se mojó'),
+        ('ROTO', 'Se rompió'),
+        ('NO_ENTREGADO', 'Nunca se entregó'),
+        ('PERDIDO', 'Pérdida'),
+        ('OTRO', 'Otro')
+    ]
+
+    id_baja = models.AutoField(primary_key=True)
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, verbose_name='Material')
+    cantidad = models.IntegerField(default=1, verbose_name='Cantidad dada de baja')
+    numero_entrada = models.CharField(max_length=50, blank=True, null=True, verbose_name='Número de Entrada')
+    motivo = models.CharField(max_length=50, choices=MOTIVOS, verbose_name='Motivo')
+    observaciones = models.TextField(blank=True, verbose_name='Observaciones')
+    fecha_baja = models.DateField(default=timezone.localdate, verbose_name='Fecha de Baja')
+
+    class Meta:
+        verbose_name = 'Baja de Material'
+        verbose_name_plural = 'Bajas de Materiales'
+
+    def __str__(self):
+        return f"Baja #{self.id_baja} - {self.material.titulo} ({self.get_motivo_display()})"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            # 1. Decrementar cantidad total y disponible
+            self.material.cantidad_total = max(0, self.material.cantidad_total - self.cantidad)
+            self.material.cantidad_disponible = max(0, self.material.cantidad_disponible - self.cantidad)
+            
+            # 2. Si se especificó un número de entrada, removerlo de la lista
+            if self.numero_entrada:
+                to_remove = [x.strip() for x in self.numero_entrada.split(',') if x.strip()]
+                current_nes = [x.strip() for x in self.material.numero_entrada.split(',') if x.strip()] if self.material.numero_entrada else []
+                new_nes = [x for x in current_nes if x not in to_remove]
+                self.material.numero_entrada = ", ".join(new_nes)
+            
+            if self.material.cantidad_total == 0:
+                self.material.estado_material = 'INACTIVO'
+
+            self.material.save()
+        super().save(*args, **kwargs)
+
+
 # 5. Circulación (Lógica Relacional)
 class Prestamo(models.Model):
     ESTADOS = [
@@ -294,7 +348,7 @@ class Prestamo(models.Model):
     ALUMNOS_id_alumno = models.ForeignKey(Alumno, on_delete=models.PROTECT, db_column='ALUMNOS_id_alumno', verbose_name='Alumno')
     MATERIALES_id_material = models.ForeignKey(Material, on_delete=models.PROTECT, db_column='MATERIALES_id_material', verbose_name='Material')
     administrador_usuariosbibliosoft_id = models.ForeignKey(User, on_delete=models.PROTECT, db_column='administrador_usuariosbibliosoft_id', verbose_name='Usuario que presta')
-    fecha_prestamo = models.DateField(default=timezone.now, verbose_name='Fecha de Préstamo')
+    fecha_prestamo = models.DateField(default=timezone.localdate, verbose_name='Fecha de Préstamo')
     fecha_vencimiento = models.DateField(verbose_name='Fecha de Vencimiento')
     estado = models.CharField(max_length=20, choices=ESTADOS, default='ACTIVO', verbose_name='Estado')
     
@@ -310,13 +364,25 @@ class Prestamo(models.Model):
     def __str__(self):
         return f"Préstamo {self.id_prestamo} - {self.ALUMNOS_id_alumno} - {self.MATERIALES_id_material.titulo}"
 
+    @property
+    def lista_numero_entrada(self):
+        if not self.numero_entrada:
+            return []
+        return [x.strip() for x in self.numero_entrada.split(',') if x.strip()]
+
+    def delete(self, *args, **kwargs):
+        if self.estado in ['ACTIVO', 'VENCIDO']:
+            self.MATERIALES_id_material.cantidad_disponible += self.cantidad
+            self.MATERIALES_id_material.save()
+        super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         from django.utils import timezone
         
         # Fallback to calculate due date (2 days from today) if not set
         if not self.fecha_vencimiento:
-            self.fecha_vencimiento = timezone.now().date() + timezone.timedelta(days=2)
+            self.fecha_vencimiento = timezone.localdate() + timezone.timedelta(days=2)
 
         if is_new:
             # Validar disponibilidad
@@ -343,7 +409,7 @@ class Prestamo(models.Model):
     @classmethod
     def actualizar_vencidos(cls):
         from django.utils import timezone
-        cls.objects.filter(estado='ACTIVO', fecha_vencimiento__lt=timezone.now().date()).update(estado='VENCIDO')
+        cls.objects.filter(estado='ACTIVO', fecha_vencimiento__lt=timezone.localdate()).update(estado='VENCIDO')
 
 class Devolucion(models.Model):
     id_devolucion = models.AutoField(primary_key=True)
@@ -374,8 +440,8 @@ class Devolucion(models.Model):
             from django.utils import timezone
             prestamo = self.prestamos_id_prestamo
             config = ConfiguracionGeneral.get_solo()
-            if config.recargo_activo and prestamo.fecha_vencimiento < timezone.now().date():
-                dias_retraso = (timezone.now().date() - prestamo.fecha_vencimiento).days
+            if config.recargo_activo and prestamo.fecha_vencimiento < timezone.localdate():
+                dias_retraso = (timezone.localdate() - prestamo.fecha_vencimiento).days
                 self.multa = dias_retraso * config.monto_recargo
             else:
                 self.multa = 0

@@ -1,7 +1,7 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone
@@ -9,7 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral
+    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral, BajaMaterial
 )
 from .forms import (
     PrestamoForm, AlumnoForm, UserProfileForm,
@@ -157,6 +157,94 @@ class MaterialDeleteView(LoginRequiredMixin, DeleteView):
         return response
 
 
+class MaterialDetailView(LoginRequiredMixin, DetailView):
+    model = Material
+    template_name = 'biblioteca/material_detail.html'
+    context_object_name = 'material'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Detalles del Material'
+        context['subtitle'] = f"Información completa sobre: {self.object.titulo}"
+        # Obtener todas las bajas asociadas a este material
+        context['bajas'] = self.object.bajamaterial_set.all().order_by('-fecha_baja')
+        return context
+
+
+class MaterialBajaCreateView(LoginRequiredMixin, CreateView):
+    model = BajaMaterial
+    fields = ['numero_entrada', 'cantidad', 'motivo', 'observaciones']
+    template_name = 'biblioteca/material_baja_form.html'
+    success_url = reverse_lazy('material-list')
+
+    def dispatch(self, request, *args, **kwargs):
+        self.material = get_object_or_404(Material, pk=self.kwargs.get('pk'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, form_class=None):
+        from django import forms
+        form = super().get_form(form_class)
+        for field_name, field in form.fields.items():
+            if field_name == 'motivo':
+                field.widget.attrs['class'] = 'form-select'
+            else:
+                field.widget.attrs['class'] = 'form-control'
+
+        disponibles = self.material.numeros_entrada_disponibles()
+        if disponibles:
+            form.fields['numero_entrada'] = forms.MultipleChoiceField(
+                choices=[(n, f"N° {n}") for n in disponibles],
+                required=True,
+                label='Número(s) de Entrada',
+                widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': min(len(disponibles), 5)})
+            )
+        else:
+            form.fields['numero_entrada'].widget = forms.HiddenInput()
+            form.fields['numero_entrada'].required = False
+            
+        form.fields['cantidad'].initial = 1
+        form.fields['cantidad'].widget.attrs['min'] = 1
+        return form
+
+    def form_valid(self, form):
+        form.instance.material = self.material
+        cantidad = form.cleaned_data.get('cantidad') or 1
+        
+        if cantidad > self.material.cantidad_disponible:
+            form.add_error('cantidad', f"No se puede dar de baja una cantidad mayor a la disponible en inventario. Stock disponible: {self.material.cantidad_disponible}")
+            return self.form_invalid(form)
+            
+        numeros_entrada = form.cleaned_data.get('numero_entrada')
+        disponibles = self.material.numeros_entrada_disponibles()
+        
+        if disponibles:
+            if not numeros_entrada:
+                form.add_error('numero_entrada', "Debe seleccionar los números de entrada correspondientes.")
+                return self.form_invalid(form)
+            if len(numeros_entrada) != cantidad:
+                form.add_error('cantidad', f"La cantidad a dar de baja ({cantidad}) debe coincidir con el número de ejemplares seleccionados ({len(numeros_entrada)}).")
+                return self.form_invalid(form)
+            
+            for ne in numeros_entrada:
+                if ne not in disponibles:
+                    form.add_error('numero_entrada', f"El número de entrada '{ne}' ya no se encuentra disponible.")
+                    return self.form_invalid(form)
+            
+            form.instance.numero_entrada = ", ".join(numeros_entrada)
+        else:
+            form.instance.numero_entrada = None
+            
+        response = super().form_valid(form)
+        messages.success(self.request, f"Se dio de baja {cantidad} copia(s) del material '{self.material.titulo}' exitosamente.")
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['material'] = self.material
+        context['title'] = 'Dar de Baja Material'
+        context['subtitle'] = f"Registrar la baja de una o más copias de: {self.material.titulo}"
+        return context
+
 
 # --- PRESTAMO CRUD ---
 class PrestamoListView(LoginRequiredMixin, ListView):
@@ -178,6 +266,15 @@ class PrestamoListView(LoginRequiredMixin, ListView):
                 Q(numero_entrada__icontains=q) |
                 Q(estado__icontains=q)
             )
+        
+        filtro = self.request.GET.get('filtro_estado')
+        if filtro:
+            if filtro == 'activo':
+                queryset = queryset.filter(estado='ACTIVO')
+            elif filtro == 'vencido':
+                queryset = queryset.filter(estado='VENCIDO')
+            elif filtro == 'devuelto':
+                queryset = queryset.filter(estado='DEVUELTO')
         return queryset
 
 class PrestamoCreateView(LoginRequiredMixin, CreateView):
@@ -189,7 +286,7 @@ class PrestamoCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         from django.core.exceptions import ValidationError
         form.instance.administrador_usuariosbibliosoft_id = self.request.user
-        form.instance.fecha_vencimiento = timezone.now().date() + timezone.timedelta(days=2)
+        form.instance.fecha_vencimiento = timezone.localdate() + timezone.timedelta(days=2)
         try:
             return super().form_valid(form)
         except ValidationError as e:
@@ -239,13 +336,20 @@ class PrestamoUpdateView(LoginRequiredMixin, UpdateView):
         context['materiales_json'] = materiales_data
         return context
 
+
+class PrestamoDetailView(LoginRequiredMixin, DetailView):
+    model = Prestamo
+    template_name = 'biblioteca/prestamo_detail.html'
+    context_object_name = 'prestamo'
+
+
 class PrestamoProrrogaView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         prestamo = Prestamo.objects.filter(pk=pk).first()
         if prestamo:
             if prestamo.estado in ['ACTIVO', 'VENCIDO']:
-                prestamo.fecha_prestamo = timezone.now().date()
-                prestamo.fecha_vencimiento = timezone.now().date() + timezone.timedelta(days=2)
+                prestamo.fecha_prestamo = timezone.localdate()
+                prestamo.fecha_vencimiento = timezone.localdate() + timezone.timedelta(days=2)
                 prestamo.estado = 'ACTIVO'
                 prestamo.prorrogado = True
                 prestamo.save()
@@ -262,12 +366,20 @@ class PrestamoDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('prestamo-list')
 
     def get(self, request, *args, **kwargs):
-        messages.error(request, "No se permite eliminar registros de préstamos para preservar el historial de circulación.")
-        return redirect('prestamo-list')
+        obj = self.get_object()
+        if obj.estado != 'ACTIVO':
+            messages.error(request, "Solo se permite eliminar préstamos con estado Activo.")
+            return redirect('prestamo-list')
+        return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        messages.error(request, "No se permite eliminar registros de préstamos para preservar el historial de circulación.")
-        return redirect('prestamo-list')
+        obj = self.get_object()
+        if obj.estado != 'ACTIVO':
+            messages.error(request, "Solo se permite eliminar préstamos con estado Activo.")
+            return redirect('prestamo-list')
+        response = super().post(request, *args, **kwargs)
+        messages.success(request, f"Préstamo #{obj.id_prestamo} eliminado correctamente y el stock fue restaurado.")
+        return response
 
 # --- ALUMNO CRUD ---
 class AlumnoListView(LoginRequiredMixin, ListView):
@@ -284,6 +396,17 @@ class AlumnoListView(LoginRequiredMixin, ListView):
                 Q(apellido__icontains=q) |
                 Q(matricula__icontains=q)
             )
+        
+        filtro = self.request.GET.get('filtro_carnet')
+        if filtro:
+            import datetime
+            limit = timezone.localdate() - datetime.timedelta(days=365)
+            if filtro == 'activo':
+                queryset = queryset.filter(carnet_activo=True, carnet_fecha_entrega__gte=limit)
+            elif filtro == 'sin_activar':
+                queryset = queryset.filter(carnet_activo=False)
+            elif filtro == 'expirado':
+                queryset = queryset.filter(carnet_activo=True, carnet_fecha_entrega__lt=limit)
         return queryset
 
 class AlumnoCreateView(LoginRequiredMixin, CreateView):
@@ -335,9 +458,9 @@ class AlumnoActivarCarnetView(LoginRequiredMixin, View):
                 try:
                     fecha_entrega = datetime.strptime(fecha_str, '%Y-%m-%d').date()
                 except ValueError:
-                    fecha_entrega = timezone.now().date()
+                    fecha_entrega = timezone.localdate()
             else:
-                fecha_entrega = timezone.now().date()
+                fecha_entrega = timezone.localdate()
             
             alumno.carnet_activo = True
             alumno.carnet_fecha_entrega = fecha_entrega
@@ -729,7 +852,7 @@ class DevolucionCreateView(LoginRequiredMixin, CreateView):
                 'material': p.MATERIALES_id_material.titulo
             }
         context['prestamos_json'] = json.dumps(prestamos_data)
-        context['hoy'] = timezone.now().date().strftime('%Y-%m-%d')
+        context['hoy'] = timezone.localdate().strftime('%Y-%m-%d')
         
         # Add dynamic configuration for Javascript
         config = ConfiguracionGeneral.get_solo()
@@ -786,7 +909,7 @@ class ReportePrintView(LoginRequiredMixin, TemplateView):
         rows = []
         
         from datetime import datetime
-        now = datetime.now()
+        now = timezone.localtime()
         months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
         weekdays = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
         
@@ -887,48 +1010,71 @@ class ReportePrintView(LoginRequiredMixin, TemplateView):
                 ])
                 
         elif tipo == 'acervo_carrera':
-            carrera = Carrera.objects.get(pk=carrera_id)
+            carrera = None
+            if carrera_id:
+                if str(carrera_id).isdigit():
+                    carrera = Carrera.objects.filter(pk=carrera_id).first()
+                else:
+                    carrera = Carrera.objects.filter(nombre__icontains=carrera_id).first()
+
             title = "Acervo Bibliográfico"
-            subtitle = f"Carrera: {carrera.nombre.upper()}"
-            headers = ["Dewey", "Título", "Autor/es", "Año", "Edición"]
+            headers = ["Dewey", "Título", "Autor/es", "Género/s", "Págs.", "Editorial", "Año", "Edición"]
             
-            materiales = Material.objects.filter(
-                tipo_registro='LIBRO',
-                carreras=carrera
-            ).prefetch_related('autores_id_autor').order_by('numeracion_dewey', 'titulo')
-            
-            for m in materiales:
-                autores_desc = ", ".join([a.descripcion for a in m.autores_id_autor.all()]) if m.autores_id_autor.exists() else "—"
-                rows.append([
-                    m.numeracion_dewey or "—",
-                    m.titulo,
-                    autores_desc,
-                    m.año_publicacion or "—",
-                    m.edicion or "—"
-                ])
+            if carrera:
+                subtitle = f"Carrera: {carrera.nombre.upper()}"
+                materiales = Material.objects.filter(
+                    tipo_registro='LIBRO',
+                    carreras=carrera
+                ).prefetch_related('autores_id_autor', 'generos').select_related('editoriales_id_editorial').order_by('numeracion_dewey', 'titulo')
+                
+                for m in materiales:
+                    autores_desc = ", ".join([a.descripcion for a in m.autores_id_autor.all()]) if m.autores_id_autor.exists() else "—"
+                    generos_desc = ", ".join([g.nombre for g in m.generos.all()]) if m.generos.exists() else "—"
+                    editorial_desc = m.editoriales_id_editorial.nombre if m.editoriales_id_editorial else "—"
+                    rows.append([
+                        m.numeracion_dewey or "—",
+                        m.titulo,
+                        autores_desc,
+                        generos_desc,
+                        m.numero_paginas or "—",
+                        editorial_desc,
+                        m.año_publicacion or "—",
+                        m.edicion or "—"
+                    ])
+            else:
+                subtitle = f"Carrera: {carrera_id or 'No especificada'} (No se encontraron coincidencias)"
+                rows = []
                 
         elif tipo == 'investigacion_carrera':
-            carrera = Carrera.objects.get(pk=carrera_id)
+            carrera = None
+            if carrera_id:
+                if str(carrera_id).isdigit():
+                    carrera = Carrera.objects.filter(pk=carrera_id).first()
+                else:
+                    carrera = Carrera.objects.filter(nombre__icontains=carrera_id).first()
+
             title = "Materiales de Investigación"
-            subtitle = f"Carrera: {carrera.nombre.upper()}"
-            headers = ["N° Entrada", "Título", "Autor/es", "Título de Grado", "Tipo de Trabajo", "Año", "Estado"]
+            headers = ["Título", "Autor/es", "Título de Grado", "Tipo de Trabajo", "Año"]
             
-            materiales = Material.objects.filter(
-                tipo_registro='TRABAJO_INVESTIGACION',
-                carreras=carrera
-            ).prefetch_related('autores_id_autor').order_by('titulo')
-            
-            for m in materiales:
-                autores_desc = ", ".join([a.descripcion for a in m.autores_id_autor.all()]) if m.autores_id_autor.exists() else "—"
-                rows.append([
-                    m.numero_entrada or "—",
-                    m.titulo,
-                    autores_desc,
-                    m.titulo_grado or "—",
-                    m.tipo_trabajo or m.tipo_material or "—",
-                    m.año_publicacion or "—",
-                    m.estado_material
-                ])
+            if carrera:
+                subtitle = f"Carrera: {carrera.nombre.upper()}"
+                materiales = Material.objects.filter(
+                    tipo_registro='TRABAJO_INVESTIGACION',
+                    carreras=carrera
+                ).prefetch_related('autores_id_autor').order_by('titulo')
+                
+                for m in materiales:
+                    autores_desc = ", ".join([a.descripcion for a in m.autores_id_autor.all()]) if m.autores_id_autor.exists() else "—"
+                    rows.append([
+                        m.titulo,
+                        autores_desc,
+                        m.titulo_grado or "—",
+                        m.tipo_trabajo or m.tipo_material or "—",
+                        m.año_publicacion or "—"
+                    ])
+            else:
+                subtitle = f"Carrera: {carrera_id or 'No especificada'} (No se encontraron coincidencias)"
+                rows = []
 
         context['title'] = title
         context['subtitle'] = subtitle

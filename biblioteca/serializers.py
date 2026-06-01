@@ -12,7 +12,7 @@ class MaterialSerializer(serializers.ModelSerializer):
         fields = [
             'id_material', 'titulo', 'autores_id_autor', 'editoriales_id_editorial', 'categorias_id_categoria', 
             'tipodocumento_id_tipo', 'año_publicacion', 
-            'cantidad_disponible', 'ubicacion_fisica'
+            'cantidad_disponible'
         ]
 
 class CategoriaSerializer(serializers.ModelSerializer):

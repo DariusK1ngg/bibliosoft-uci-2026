@@ -2,8 +2,8 @@ from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from .views import (
     DashboardView,
-    MaterialListView, MaterialCreateView, MaterialUpdateView, MaterialDeleteView,
-    PrestamoListView, PrestamoCreateView, PrestamoUpdateView, PrestamoProrrogaView, PrestamoDeleteView,
+    MaterialListView, MaterialCreateView, MaterialUpdateView, MaterialDeleteView, MaterialBajaCreateView, MaterialDetailView,
+    PrestamoListView, PrestamoCreateView, PrestamoUpdateView, PrestamoDetailView, PrestamoProrrogaView, PrestamoDeleteView,
     AlumnoListView, AlumnoCreateView, AlumnoUpdateView, AlumnoDeleteView, AlumnoActivarCarnetView, AlumnoDesactivarCarnetView,
     UserProfileView,
     AutorListView, AutorCreateView, AutorUpdateView, AutorDeleteView,
@@ -25,13 +25,16 @@ urlpatterns = [
     # Materiales
     path('materiales/', MaterialListView.as_view(), name='material-list'),
     path('materiales/nuevo/', MaterialCreateView.as_view(), name='material-create'),
+    path('materiales/<int:pk>/', MaterialDetailView.as_view(), name='material-detail'),
     path('materiales/<int:pk>/editar/', MaterialUpdateView.as_view(), name='material-update'),
+    path('materiales/<int:pk>/baja/', MaterialBajaCreateView.as_view(), name='material-baja'),
     path('materiales/<int:pk>/borrar/', MaterialDeleteView.as_view(), name='material-delete'),
 
 
     # Préstamos
     path('prestamos/', PrestamoListView.as_view(), name='prestamo-list'),
     path('prestamos/nuevo/', PrestamoCreateView.as_view(), name='prestamo-create'),
+    path('prestamos/<int:pk>/', PrestamoDetailView.as_view(), name='prestamo-detail'),
     path('prestamos/<int:pk>/editar/', PrestamoUpdateView.as_view(), name='prestamo-update'),
     path('prestamos/<int:pk>/prorroga/', PrestamoProrrogaView.as_view(), name='prestamo-prorroga'),
     path('prestamos/<int:pk>/borrar/', PrestamoDeleteView.as_view(), name='prestamo-delete'),

@@ -15,13 +15,23 @@
     <div class="card-header-custom d-flex justify-content-between align-items-center bg-white">
         <h5 class="mb-0 text-dark fw-bold">Listado de Estudiantes</h5>
         
-        <!-- Search form -->
-        <form action="{% url 'alumno-list' %}" method="get" class="d-flex" style="max-width: 300px;">
-            <div class="input-group input-group-sm">
+        <!-- Search and filter form -->
+        <form action="{% url 'alumno-list' %}" method="get" class="d-flex gap-2 align-items-center flex-wrap" style="max-width: 500px; width: 100%;">
+            <div class="input-group input-group-sm flex-grow-1" style="max-width: 260px;">
                 <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar por nombre o matrícula...">
-                <button type="submit" class="btn btn-secondary d-none">Buscar</button>
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar por nombre o matrícula...">
             </div>
+            
+            <div class="input-group input-group-sm" style="max-width: 180px;">
+                <span class="input-group-text bg-light text-muted"><i class="fas fa-filter"></i></span>
+                <select name="filtro_carnet" class="form-select bg-light" onchange="this.form.submit()">
+                    <option value="">Todos los Carnets</option>
+                    <option value="activo" {% if request.GET.filtro_carnet == 'activo' %}selected{% endif %}>Activos</option>
+                    <option value="sin_activar" {% if request.GET.filtro_carnet == 'sin_activar' %}selected{% endif %}>Sin Activar</option>
+                    <option value="expirado" {% if request.GET.filtro_carnet == 'expirado' %}selected{% endif %}>Expirados</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary d-none">Buscar</button>
         </form>
     </div>
     
@@ -55,7 +65,25 @@
                         <div class="text-dark small">{{ alumno.carreras_id_carrera.nombre }}</div>
                     </td>
                     <td class="text-center">
-                        {% if alumno.carnet_activo %}
+                        {% if alumno.carnet_expirado %}
+                            <div class="d-flex flex-column align-items-center gap-1">
+                                <span class="badge badge-custom badge-soft-danger">
+                                    <i class="fas fa-exclamation-circle me-1"></i> Expirado {% if alumno.carnet_fecha_entrega %}({{ alumno.carnet_fecha_entrega|date:"d/m/Y" }}){% endif %}
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1 py-1 px-2 mt-1" 
+                                        data-bs-toggle="modal" data-bs-target="#activarCarnetModal"
+                                        data-alumno-id="{{ alumno.id_alumno }}" data-alumno-nombre="{{ alumno.nombre }} {{ alumno.apellido }}"
+                                        data-is-reactivate="true"
+                                        style="font-size: 0.8rem;">
+                                    <i class="fas fa-sync-alt"></i> Reactivar
+                                </button>
+                                <button type="button" class="btn btn-link text-muted p-0 small text-decoration-none" style="font-size: 0.72rem; margin-top: 2px;" title="Quitar Carnet"
+                                        data-bs-toggle="modal" data-bs-target="#desactivarCarnetModal"
+                                        data-alumno-id="{{ alumno.id_alumno }}" data-alumno-nombre="{{ alumno.nombre }} {{ alumno.apellido }}">
+                                    <i class="fas fa-times-circle"></i> Quitar Carnet
+                                </button>
+                            </div>
+                        {% elif alumno.carnet_activo %}
                             <div class="d-flex flex-column align-items-center gap-1">
                                 <span class="badge badge-custom badge-soft-success">
                                     <i class="fas fa-id-card me-1"></i> Activo {% if alumno.carnet_fecha_entrega %}({{ alumno.carnet_fecha_entrega|date:"d/m/Y" }}){% endif %}
@@ -169,12 +197,21 @@
                 const button = event.relatedTarget;
                 const alumnoId = button.getAttribute('data-alumno-id');
                 const alumnoNombre = button.getAttribute('data-alumno-nombre');
+                const isReactivate = button.getAttribute('data-is-reactivate') === 'true';
                 
                 const modalTitle = activarCarnetModal.querySelector('.modal-title');
                 const form = activarCarnetModal.querySelector('#activarCarnetForm');
                 const dateInput = activarCarnetModal.querySelector('#fechaEntrega');
+                const submitBtn = activarCarnetModal.querySelector('.btn-primary-custom');
                 
-                modalTitle.textContent = `Activar Carnet: ${alumnoNombre}`;
+                if (isReactivate) {
+                    modalTitle.textContent = `Reactivar Carnet: ${alumnoNombre}`;
+                    if (submitBtn) submitBtn.textContent = 'Confirmar y Reactivar';
+                } else {
+                    modalTitle.textContent = `Activar Carnet: ${alumnoNombre}`;
+                    if (submitBtn) submitBtn.textContent = 'Confirmar y Activar';
+                }
+                
                 const urlTemplate = "{% url 'alumno-activar-carnet' 0 %}";
                 form.action = urlTemplate.replace('0', alumnoId);
                 

@@ -58,9 +58,6 @@
                     <p class="lead mb-5 opacity-75">Bienvenido a la Biblioteca de la Universidad UCI. Accede a recursos académicos, investigación de vanguardia y espacios de estudio diseñados para tu éxito.</p>
                     <div class="d-flex gap-3">
                         <a href="{% url 'catalogo_publico' %}" class="btn btn-primary-custom">Explorar Catálogo</a>
-                        <a href="{% url 'catalogo_publico' %}" class="btn btn-outline-light rounded-pill px-4 py-2 d-flex align-items-center">
-                            <i class="fab fa-google-play me-2"></i> App Móvil
-                        </a>
                     </div>
                 </div>
                 <div class="col-lg-6 mt-5 mt-lg-0" data-aos="zoom-in">
@@ -198,6 +195,26 @@
         AOS.init({
             duration: 800,
             once: true
+        });
+
+        // Cerrar el menú colapsable de Bootstrap al hacer clic en un enlace de navegación interna (Inicio o Servicios)
+        document.addEventListener('DOMContentLoaded', function () {
+            const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+            const menuCollapse = document.getElementById('navbarNav');
+            
+            if (menuCollapse) {
+                // Instancia del objeto collapse de Bootstrap
+                const bsCollapse = new bootstrap.Collapse(menuCollapse, { toggle: false });
+                
+                navLinks.forEach(function (link) {
+                    link.addEventListener('click', function () {
+                        // Solo colapsar si el menú está visible (pantallas móviles)
+                        if (menuCollapse.classList.contains('show')) {
+                            bsCollapse.hide();
+                        }
+                    });
+                });
+            }
         });
     </script>
 </body>

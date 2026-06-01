@@ -1,0 +1,130 @@
+{% extends 'biblioteca/base.html' %}
+
+{% block content %}
+<div class="page-title-area">
+    <div class="d-flex justify-content-between align-items-center w-100">
+        <div>
+            <h1 class="page-title">{{ title }}</h1>
+            <p class="page-subtitle">{{ subtitle }}</p>
+        </div>
+        <a href="{% url 'material-list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <!-- Detalles del Material -->
+        <div class="card card-custom mb-4">
+            <div class="card-header-custom bg-white">
+                <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-book me-2"></i> Información General</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <tbody>
+                        <tr>
+                            <th width="30%">Título</th>
+                            <td>{{ material.titulo }}</td>
+                        </tr>
+                        <tr>
+                            <th>Autor(es)</th>
+                            <td>{{ material.autor }}</td>
+                        </tr>
+                        <tr>
+                            <th>Categoría</th>
+                            <td>{{ material.categoria|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Editorial</th>
+                            <td>{{ material.editorial|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Tipo de Registro</th>
+                            <td>{{ material.get_tipo_registro_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Estado Actual</th>
+                            <td>
+                                {% if material.estado_material == 'DISPONIBLE' or material.estado_material == 'Disponible' %}
+                                    <span class="badge bg-success">Disponible</span>
+                                {% elif material.estado_material == 'INACTIVO' %}
+                                    <span class="badge bg-danger">Inactivo (Dado de baja)</span>
+                                {% elif material.estado_material == 'PRESTADO' or material.estado_material == 'Prestado' %}
+                                    <span class="badge bg-warning text-dark">Prestado</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ material.estado_material }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Cantidad Total</th>
+                            <td>{{ material.cantidad_total }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cantidad Disponible</th>
+                            <td>{{ material.cantidad_disponible }}</td>
+                        </tr>
+                        <tr>
+                            <th>Números de Entrada</th>
+                            <td>
+                                {% if material.numero_entrada %}
+                                    {{ material.numero_entrada }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Historial de Bajas -->
+        <div class="card card-custom">
+            <div class="card-header-custom bg-white">
+                <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-arrow-alt-circle-down text-danger me-2"></i> Historial de Bajas</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if bajas %}
+                    <ul class="list-group list-group-flush">
+                        {% for baja in bajas %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>{{ baja.get_motivo_display }}</strong>
+                                <span class="badge bg-danger rounded-pill">{{ baja.cantidad }} copia(s)</span>
+                            </div>
+                            <p class="mb-1 small text-muted">
+                                <i class="far fa-calendar-alt me-1"></i> {{ baja.fecha_baja|date:"d M Y" }}
+                            </p>
+                            {% if baja.numero_entrada %}
+                            <p class="mb-1 small">
+                                <strong>N° de Entrada:</strong> {{ baja.numero_entrada }}
+                            </p>
+                            {% endif %}
+                            {% if baja.observaciones %}
+                            <p class="mb-0 small fst-italic">
+                                "{{ baja.observaciones }}"
+                            </p>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="p-4 text-center text-muted">
+                        <i class="fas fa-check-circle fa-3x mb-2 text-success opacity-50"></i>
+                        <p class="mb-0">No se registran bajas para este material.</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light text-center border-top-0">
+                <a href="{% url 'material-baja' material.id_material %}" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-minus-circle me-1"></i> Registrar Nueva Baja
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

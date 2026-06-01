@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Autor, Editorial, Categoria, Genero, TipoDocumento,
     Facultad, Carrera, Alumno, Material, Prestamo, Devolucion,
-    MaterialCarrera, MaterialGenero
+    MaterialCarrera, MaterialGenero, BajaMaterial
 )
 
 @admin.register(Autor)
@@ -75,3 +75,10 @@ class PrestamoAdmin(admin.ModelAdmin):
 class DevolucionAdmin(admin.ModelAdmin):
     list_display = ('id_devolucion', 'prestamos_id_prestamo', 'fecha_devolucion', 'multa')
     search_fields = ('prestamos_id_prestamo__id_prestamo',)
+
+
+@admin.register(BajaMaterial)
+class BajaMaterialAdmin(admin.ModelAdmin):
+    list_display = ('id_baja', 'material', 'cantidad', 'numero_entrada', 'motivo', 'fecha_baja')
+    search_fields = ('material__titulo', 'numero_entrada')
+    list_filter = ('motivo', 'fecha_baja')

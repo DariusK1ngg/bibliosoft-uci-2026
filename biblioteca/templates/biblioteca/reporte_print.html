@@ -118,7 +118,8 @@
         }
 
         .report-table tr {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             page-break-after: auto;
         }
 
@@ -130,6 +131,8 @@
             font-weight: 700;
             text-transform: uppercase;
             text-align: left;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         .report-table td {
@@ -138,6 +141,10 @@
             border-bottom: 1px solid #e0e0e0;
             vertical-align: middle;
             word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* Alternating rows or custom spacing */
@@ -145,17 +152,21 @@
             border-bottom: 1px solid #000000;
         }
 
-        /* Specific Table Column Sizing for Acervo (Dewey, Título, Autor, Año, Edición) */
-        .col-dewey { width: 12%; }
-        .col-titulo { width: 43%; }
-        .col-autor { width: 25%; }
-        .col-anio { width: 10%; }
-        .col-edicion { width: 10%; }
+        /* Specific Table Column Sizing for Acervo (Dewey, Título, Autor, Género, Págs, Editorial, Año, Edición) */
+        .col-dewey { width: 9%; }
+        .col-titulo { width: 26%; }
+        .col-autor { width: 17%; }
+        .col-genero { width: 13%; }
+        .col-paginas { width: 6%; }
+        .col-editorial { width: 15%; }
+        .col-anio { width: 7%; }
+        .col-edicion { width: 7%; }
 
         /* Grouped careers styles */
         .career-section {
             margin-top: 25px;
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
         .career-title {
             font-size: 12px;
@@ -165,6 +176,8 @@
             padding-bottom: 4px;
             margin-bottom: 8px;
             color: #000000;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* Footer Styles */
@@ -182,6 +195,8 @@
             background-color: #ffffff;
             border-top: 1px solid #000000;
             padding-top: 5px;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         .footer-left {
@@ -209,6 +224,10 @@
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .header-container, .title-area {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
             /* Hide any web elements if they were to render */
             .no-print {
@@ -293,8 +312,14 @@
                             {% elif forloop.counter == 3 %}
                                 <th class="col-autor">{{ header }}</th>
                             {% elif forloop.counter == 4 %}
-                                <th class="col-anio">{{ header }}</th>
+                                <th class="col-genero">{{ header }}</th>
                             {% elif forloop.counter == 5 %}
+                                <th class="col-paginas">{{ header }}</th>
+                            {% elif forloop.counter == 6 %}
+                                <th class="col-editorial">{{ header }}</th>
+                            {% elif forloop.counter == 7 %}
+                                <th class="col-anio">{{ header }}</th>
+                            {% elif forloop.counter == 8 %}
                                 <th class="col-edicion">{{ header }}</th>
                             {% else %}
                                 <th>{{ header }}</th>
