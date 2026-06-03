@@ -35,6 +35,7 @@ class MaterialListView(LoginRequiredMixin, ListView):
     model = Material
     template_name = 'biblioteca/material_list.html'
     context_object_name = 'materiales'
+    paginate_by = 15
 
     def get_queryset(self):
         queryset = super().get_queryset()

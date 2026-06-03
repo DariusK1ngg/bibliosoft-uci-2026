@@ -347,6 +347,34 @@
                 margin-right: 4px !important;
             }
         }
+
+        /* Pagination Styling */
+        .pagination .page-link {
+            color: var(--primary);
+            border-color: var(--border);
+            padding: 0.6rem 0.9rem;
+            margin: 0 3px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .pagination .page-link:hover {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary) !important;
+            border-color: var(--primary) !important;
+            color: white !important;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: var(--muted);
+            background-color: #f8fafc;
+            border-color: var(--border);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -398,6 +426,7 @@
                 <div class="filter-card">
                     <h5><i class="fas fa-sliders-h"></i> Filtrar Acervo</h5>
                     <form method="get" action="{% url 'catalogo_publico' %}" id="filterForm">
+                        <input type="hidden" name="page" id="currentPageInput" value="{{ materiales.number }}">
                         
                         <!-- Buscar por texto -->
                         <div class="mb-3">
@@ -496,7 +525,7 @@
             <!-- Listado de Materiales -->
             <div class="col-lg-9" id="catalogo-resultados">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <p class="mb-0 text-muted">Se encontraron <strong>{{ materiales.count }}</strong> recurso{{ materiales.count|pluralize }}</p>
+                    <p class="mb-0 text-muted">Se encontraron <strong>{{ materiales.paginator.count }}</strong> recurso{{ materiales.paginator.count|pluralize }}</p>
                 </div>
 
                 {% if materiales %}
@@ -565,6 +594,53 @@
                             </div>
                         {% endfor %}
                     </div>
+
+                    <!-- Paginación -->
+                    {% if materiales.has_other_pages %}
+                        <nav class="mt-5 d-flex justify-content-center">
+                            <ul class="pagination pagination-md">
+                                {% if materiales.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link page-link-ajax" href="#" data-page="{{ materiales.previous_page_number }}" aria-label="Anterior">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&laquo;</span>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in materiales.paginator.page_range %}
+                                    {% if materiales.number == num %}
+                                        <li class="page-item active" aria-current="page">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > materiales.number|add:-3 and num < materiales.number|add:3 or num == 1 or num == materiales.paginator.num_pages %}
+                                        <li class="page-item">
+                                            <a class="page-link page-link-ajax" href="#" data-page="{{ num }}">{{ num }}</a>
+                                        </li>
+                                    {% elif num == materiales.number|add:-3 or num == materiales.number|add:3 %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if materiales.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link page-link-ajax" href="#" data-page="{{ materiales.next_page_number }}" aria-label="Siguiente">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">&raquo;</span>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
                 {% else %}
                     <!-- Estado vacío -->
                     <div class="empty-state">
@@ -594,7 +670,11 @@
         const form = document.getElementById('filterForm');
 
         // Function to update catalog via AJAX
-        async function updateCatalog() {
+        async function updateCatalog(pageNumber = 1) {
+            const pageInput = document.getElementById('currentPageInput');
+            if (pageInput) {
+                pageInput.value = pageNumber;
+            }
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const [key, val] of formData.entries()) {
@@ -635,7 +715,7 @@
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                updateCatalog();
+                updateCatalog(1);
             });
         }
 
@@ -649,7 +729,7 @@
                 }
             },
             onChange: function(value) {
-                updateCatalog();
+                updateCatalog(1);
                 this.blur(); // Blur control to hide text cursor and focus after selection
             }
         };
@@ -684,10 +764,20 @@
         if (form) {
             form.addEventListener('change', function(e) {
                 if (e.target.id === 'filterFacultad' || e.target.id === 'filterCarrera' || e.target.id === 'filterDisponible' || e.target.id === 'filterOrden') {
-                    updateCatalog();
+                    updateCatalog(1);
                 }
             });
         }
+
+        // Intercept click on AJAX page links
+        document.addEventListener('click', function(e) {
+            const pageLink = e.target.closest('.page-link-ajax');
+            if (pageLink) {
+                e.preventDefault();
+                const targetPage = pageLink.getAttribute('data-page');
+                updateCatalog(targetPage);
+            }
+        });
 
         // Limpiar todo dinámicamente mediante JS sin refrescar la página
         const btnReset = document.getElementById('btnReset');
@@ -714,7 +804,7 @@
                 if (tsEditorial) tsEditorial.clear();
 
                 // 5. Actualizar el listado mediante la petición AJAX existente
-                updateCatalog();
+                updateCatalog(1);
             });
         }
 

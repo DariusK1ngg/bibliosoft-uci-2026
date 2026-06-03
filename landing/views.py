@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.db.models import Q
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from biblioteca.models import Material, Genero, Autor, Carrera, Facultad, Editorial, ConfiguracionGeneral
 
 def index(request):
@@ -55,11 +56,23 @@ def catalogo(request):
 
     # Ordenamiento
     if orden == 'reciente':
-        materiales = materiales.order_by('-año_publicacion')
+        materiales = materiales.order_by('-año_publicacion', '-id_material')
     elif orden == 'antiguo':
-        materiales = materiales.order_by('año_publicacion')
+        materiales = materiales.order_by('año_publicacion', '-id_material')
     elif orden == 'agregado':
         materiales = materiales.order_by('-id_material')
+    else:
+        materiales = materiales.order_by('-id_material')
+
+    # Pagination
+    paginator = Paginator(materiales.distinct(), 12)  # Show 12 materials per page
+    page = request.GET.get('page', 1)
+    try:
+        materiales_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        materiales_paginados = paginator.page(1)
+    except EmptyPage:
+        materiales_paginados = paginator.page(paginator.num_pages)
 
     # Fetch choices for filtering dropdowns
     generos = Genero.objects.all()
@@ -75,7 +88,7 @@ def catalogo(request):
         carreras = Carrera.objects.all()
 
     context = {
-        'materiales': materiales.distinct(),
+        'materiales': materiales_paginados,
         'generos': generos,
         'autores': autores,
         'carreras': carreras,
