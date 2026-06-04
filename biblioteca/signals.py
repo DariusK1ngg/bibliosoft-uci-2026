@@ -5,14 +5,14 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 
 from .models import (
     Autor, Editorial, Categoria, Genero, TipoDocumento, Facultad, Carrera,
-    Alumno, Material, Prestamo, Devolucion, BajaMaterial
+    Alumno, Material, Prestamo, BajaMaterial
 )
 from .utils import registrar_auditoria
 
 # List of models we want to track for audit
 AUDITED_MODELS = (
     Autor, Editorial, Categoria, Genero, TipoDocumento, Facultad, Carrera,
-    Alumno, Material, Prestamo, Devolucion, BajaMaterial, User
+    Alumno, Material, Prestamo, BajaMaterial, User
 )
 
 @receiver(pre_save)
@@ -103,30 +103,25 @@ def auditar_guardado(sender, instance, created, **kwargs):
                 detalle = (
                     f"Se registró un nuevo préstamo físico (ID: #{instance.pk}). "
                     f"El alumno {instance.ALUMNOS_id_alumno.nombre} {instance.ALUMNOS_id_alumno.apellido} "
-                    f"(Cédula: {instance.ALUMNOS_id_alumno.matricula}) retiró {instance.cantidad} ejemplar(es) "
+                    f"(Cédula: {instance.ALUMNOS_id_alumno.matricula}) retiró 1 ejemplar "
                     f"del material '{instance.MATERIALES_id_material.titulo}' (N° Entrada: {instance.numero_entrada or 'N/A'}). "
                     f"Vencimiento pactado para el {instance.fecha_vencimiento.strftime('%d/%m/%Y')}."
                 )
             else:
-                detalle = (
-                    f"Se modificaron los datos del préstamo #{instance.pk} de '{instance.ALUMNOS_id_alumno}'. "
-                    f"Cambios: {cambios or 'Ninguno'}."
-                )
-        elif sender == Devolucion:
-            if created:
-                detalle = (
-                    f"Se registró la devolución del material para el préstamo #{instance.prestamos_id_prestamo.pk}. "
-                    f"Alumno: {instance.prestamos_id_prestamo.ALUMNOS_id_alumno.nombre} {instance.prestamos_id_prestamo.ALUMNOS_id_alumno.apellido}. "
-                    f"Material devuelto: '{instance.prestamos_id_prestamo.MATERIALES_id_material.titulo}'. "
-                    f"Estado de entrega: {instance.get_estado_material_display()}. "
-                    f"Multa calculada: {instance.multa} Gs. (Pago multa: {'SÍ' if instance.pago_multa else 'NO/No aplica'}). "
-                    f"Observaciones: {instance.observaciones or 'Ninguna'}."
-                )
-            else:
-                detalle = (
-                    f"Se modificó el registro de devolución #{instance.pk}. "
-                    f"Cambios: {cambios or 'Ninguno'}."
-                )
+                if instance.estado == 'DEVUELTO':
+                    detalle = (
+                        f"Se registró la devolución del material para el préstamo #{instance.pk}. "
+                        f"Alumno: {instance.ALUMNOS_id_alumno.nombre} {instance.ALUMNOS_id_alumno.apellido}. "
+                        f"Material devuelto: '{instance.MATERIALES_id_material.titulo}'. "
+                        f"Estado de entrega: {instance.get_estado_material_display() if hasattr(instance, 'get_estado_material_display') else instance.estado_material}. "
+                        f"Multa calculada: {instance.multa} Gs. (Pago multa: {'SÍ' if instance.pago_multa else 'NO/No aplica'}). "
+                        f"Observaciones: {instance.observaciones_devolucion or 'Ninguna'}."
+                    )
+                else:
+                    detalle = (
+                        f"Se modificaron los datos del préstamo #{instance.pk} de '{instance.ALUMNOS_id_alumno}'. "
+                        f"Cambios: {cambios or 'Ninguno'}."
+                    )
         elif sender == BajaMaterial:
             if created:
                 detalle = (

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Autor, Editorial, Categoria, Genero, TipoDocumento,
-    Facultad, Carrera, Alumno, Material, Prestamo, Devolucion,
+    Facultad, Carrera, Alumno, Material, Prestamo,
     MaterialCarrera, MaterialGenero, BajaMaterial, RegistroAuditoria
 )
 
@@ -67,14 +67,9 @@ class MaterialAdmin(admin.ModelAdmin):
 
 @admin.register(Prestamo)
 class PrestamoAdmin(admin.ModelAdmin):
-    list_display = ('id_prestamo', 'ALUMNOS_id_alumno', 'MATERIALES_id_material', 'fecha_prestamo', 'fecha_vencimiento', 'estado')
+    list_display = ('id_prestamo', 'ALUMNOS_id_alumno', 'MATERIALES_id_material', 'fecha_prestamo', 'fecha_vencimiento', 'estado', 'fecha_devolucion', 'multa')
     search_fields = ('ALUMNOS_id_alumno__matricula', 'MATERIALES_id_material__titulo')
-    list_filter = ('estado', 'fecha_prestamo')
-
-@admin.register(Devolucion)
-class DevolucionAdmin(admin.ModelAdmin):
-    list_display = ('id_devolucion', 'prestamos_id_prestamo', 'fecha_devolucion', 'multa')
-    search_fields = ('prestamos_id_prestamo__id_prestamo',)
+    list_filter = ('estado', 'fecha_prestamo', 'fecha_devolucion')
 
 
 @admin.register(BajaMaterial)

@@ -48,10 +48,6 @@
                                 <div class="text-dark fw-semibold fs-5">{{ prestamo.fecha_vencimiento|date:"d/m/Y" }}</div>
                             </div>
                             <div class="col-sm-6">
-                                <label class="text-muted small fw-semibold text-uppercase">Cantidad Prestada</label>
-                                <div class="text-dark fw-bold fs-5">{{ prestamo.cantidad }} unidad(es)</div>
-                            </div>
-                            <div class="col-sm-6">
                                 <label class="text-muted small fw-semibold text-uppercase">¿Prorrogado?</label>
                                 <div>
                                     {% if prestamo.prorrogado %}
@@ -215,24 +211,6 @@
                                         <span class="badge bg-warning text-dark">Regular</span>
                                     {% else %}
                                         <span class="badge bg-danger">Malo</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="text-muted small fw-semibold text-uppercase">Multa Recargo</label>
-                                <div class="text-dark fw-bold">{{ prestamo.devolucion.multa }} Gs.</div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="text-muted small fw-semibold text-uppercase">¿Multa Pagada?</label>
-                                <div>
-                                    {% if prestamo.devolucion.multa > 0 %}
-                                        {% if prestamo.devolucion.pago_multa %}
-                                            <span class="badge bg-success"><i class="fas fa-coins me-1"></i> Sí, Pagado</span>
-                                        {% else %}
-                                            <span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i> Pendiente de Pago</span>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="badge bg-light text-muted border">No Aplica</span>
                                     {% endif %}
                                 </div>
                             </div>

@@ -77,14 +77,41 @@
                     <div class="row g-4">
                         <!-- Préstamo Select -->
                         <div class="col-md-8">
-                            <label for="{{ form.prestamos_id_prestamo.id_for_label }}" class="form-label fw-bold text-dark">Seleccionar Préstamo</label>
-                            {{ form.prestamos_id_prestamo }}
-                            <div class="form-text text-muted small mt-1">
-                                <i class="fas fa-search me-1"></i> Escriba para buscar por Alumno o por Título de Material.
-                            </div>
-                            {% for error in form.prestamos_id_prestamo.errors %}
-                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                            {% endfor %}
+                            {% if selected_prestamo %}
+                                <label class="form-label fw-bold text-dark">Préstamo a devolver</label>
+                                <div class="p-3 bg-light border rounded-3">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
+                                            <i class="fas fa-hand-holding"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-1">Préstamo #{{ selected_prestamo.id_prestamo }}</h6>
+                                            <p class="mb-1 text-dark" style="font-size: 0.9rem;">
+                                                <strong>Lector:</strong> {{ selected_prestamo.ALUMNOS_id_alumno.nombre }} {{ selected_prestamo.ALUMNOS_id_alumno.apellido }} (Cédula: {{ selected_prestamo.ALUMNOS_id_alumno.numero_documento|default:selected_prestamo.ALUMNOS_id_alumno.matricula }})
+                                            </p>
+                                            <p class="mb-1 text-dark" style="font-size: 0.9rem;">
+                                                <strong>Material:</strong> {{ selected_prestamo.MATERIALES_id_material.titulo }}
+                                                {% if selected_prestamo.numero_entrada %}
+                                                    <span class="badge bg-primary-subtle text-primary font-monospace ms-1" style="font-size: 0.8rem;">N° {{ selected_prestamo.numero_entrada }}</span>
+                                                {% endif %}
+                                            </p>
+                                            <p class="mb-0 text-muted small" style="font-size: 0.8rem;">
+                                                <strong>Vencimiento:</strong> {{ selected_prestamo.fecha_vencimiento|date:"d/m/Y" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="prestamos_id_prestamo" id="id_prestamos_id_prestamo" value="{{ selected_prestamo.id_prestamo }}">
+                            {% else %}
+                                <label for="{{ form.prestamos_id_prestamo.id_for_label }}" class="form-label fw-bold text-dark">Seleccionar Préstamo</label>
+                                {{ form.prestamos_id_prestamo }}
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="fas fa-search me-1"></i> Escriba para buscar por Alumno o por Título de Material.
+                                </div>
+                                {% for error in form.prestamos_id_prestamo.errors %}
+                                    <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                         
                         <!-- Estado del Material -->
@@ -261,45 +288,48 @@
             setPaymentStatus(false);
         });
  
-        // Initialize Tom Select
-        const ts = new TomSelect("#id_prestamos_id_prestamo", {
-            valueField: 'value',
-            labelField: 'text',
-            searchField: 'text',
-            create: false,
-            placeholder: "Busque y seleccione un préstamo...",
-            allowEmptyOption: false,
-            maxOptions: 100,
-            preload: 'focus',
-            shouldLoad: function(query) {
-                return true;
-            },
-            load: function(query, callback) {
-                var url = "{% url 'buscar-opciones' %}?model=prestamo&q=" + encodeURIComponent(query);
-                fetch(url)
-                    .then(response => response.json())
-                    .then(json => callback(json))
-                    .catch(() => callback());
-            },
-            onItemAdd: function() {
-                this.setTextboxValue('');
-                this.refreshOptions(false);
-            },
-            onChange: function(value) {
-                updateMultaState();
-            }
-        });
- 
-        if (ts && ts.control_input) {
-            ts.control_input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    const activeOption = ts.dropdown.querySelector('.active');
-                    if (!activeOption || activeOption.getAttribute('data-value') === '') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
+        // Initialize Tom Select (only if not pre-selected static layout)
+        const selectEl = document.getElementById('id_prestamos_id_prestamo');
+        if (selectEl && selectEl.tagName === 'SELECT' && !selectEl.disabled) {
+            const ts = new TomSelect("#id_prestamos_id_prestamo", {
+                valueField: 'value',
+                labelField: 'text',
+                searchField: 'text',
+                create: false,
+                placeholder: "Busque y seleccione un préstamo...",
+                allowEmptyOption: false,
+                maxOptions: 100,
+                preload: 'focus',
+                shouldLoad: function(query) {
+                    return true;
+                },
+                load: function(query, callback) {
+                    var url = "{% url 'buscar-opciones' %}?model=prestamo&q=" + encodeURIComponent(query);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(json => callback(json))
+                        .catch(() => callback());
+                },
+                onItemAdd: function() {
+                    this.setTextboxValue('');
+                    this.refreshOptions(false);
+                },
+                onChange: function(value) {
+                    updateMultaState();
                 }
             });
+     
+            if (ts && ts.control_input) {
+                ts.control_input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const activeOption = ts.dropdown.querySelector('.active');
+                        if (!activeOption || activeOption.getAttribute('data-value') === '') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    }
+                });
+            }
         }
  
         // Initial check on load (handles cases where a préstamo is pre-selected)

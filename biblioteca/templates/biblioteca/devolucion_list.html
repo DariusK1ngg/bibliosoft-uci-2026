@@ -1,14 +1,10 @@
 {% extends 'biblioteca/base.html' %}
 
-{% block content %}
-<div class="page-title-area">
+{% block content %}<div class="page-title-area">
     <div>
         <h1 class="page-title">Historial de Devoluciones</h1>
         <p class="page-subtitle">Registro y control de materiales devueltos a la biblioteca</p>
     </div>
-    <a href="{% url 'devolucion-create' %}" class="btn btn-primary-custom d-flex align-items-center gap-2">
-        <i class="fas fa-undo"></i> Registrar Devolución
-    </a>
 </div>
 
 <div class="card-custom">

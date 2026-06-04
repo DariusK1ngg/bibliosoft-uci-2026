@@ -439,6 +439,17 @@
                             </div>
                         </div>
 
+                        <!-- Tipo de Registro -->
+                        <div class="mb-3">
+                            <label class="form-label" for="filterTipoRegistro">Tipo de Registro</label>
+                            <select name="tipo_registro" id="filterTipoRegistro" class="form-select">
+                                <option value="">Seleccione una opción...</option>
+                                <option value="LIBRO" {% if selected_tipo_registro == 'LIBRO' %}selected{% endif %}>Libro</option>
+                                <option value="TRABAJO_INVESTIGACION" {% if selected_tipo_registro == 'TRABAJO_INVESTIGACION' %}selected{% endif %}>Tesis / Trabajo de Investigación</option>
+                                <option value="OTROS" {% if selected_tipo_registro == 'OTROS' %}selected{% endif %}>Otros Materiales</option>
+                            </select>
+                        </div>
+
                         <!-- Géneros -->
                         <div class="mb-3">
                             <label class="form-label" for="filterGenero">Género</label>
@@ -584,9 +595,13 @@
                                                 <span class="meta-label">Año</span>
                                                 <span class="meta-value">{{ mat.año_publicacion|default:"—" }}</span>
                                             </div>
-                                            <div class="meta-item span-2">
+                                            <div class="meta-item">
                                                 <span class="meta-label">ISBN/Código</span>
                                                 <span class="meta-value" title="{{ mat.isbn|default:'S/N' }}">{{ mat.isbn|default:"S/N" }}</span>
+                                            </div>
+                                            <div class="meta-item">
+                                                <span class="meta-label">Dewey</span>
+                                                <span class="meta-value font-monospace fw-bold text-primary" title="{{ mat.numeracion_dewey|default:'S/N' }}">{{ mat.numeracion_dewey|default:"S/N" }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -734,12 +749,19 @@
             }
         };
 
+        const tipoRegistroSelect = document.getElementById('filterTipoRegistro');
         const generoSelect = document.getElementById('filterGenero');
         const autorSelect = document.getElementById('filterAutor');
         const editorialSelect = document.getElementById('filterEditorial');
 
-        let tsGenero, tsAutor, tsEditorial;
+        let tsTipoRegistro, tsGenero, tsAutor, tsEditorial;
 
+        if (tipoRegistroSelect) {
+            tsTipoRegistro = new TomSelect(tipoRegistroSelect, {
+                ...config,
+                placeholder: "Seleccione una opción..."
+            });
+        }
         if (generoSelect) {
             tsGenero = new TomSelect(generoSelect, {
                 ...config,
@@ -799,6 +821,7 @@
                 if (checkDisponible) checkDisponible.checked = false;
 
                 // 4. Limpiar instancias de TomSelect
+                if (tsTipoRegistro) tsTipoRegistro.clear();
                 if (tsGenero) tsGenero.clear();
                 if (tsAutor) tsAutor.clear();
                 if (tsEditorial) tsEditorial.clear();

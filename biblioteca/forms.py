@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral
+    TipoDocumento, Facultad, Carrera, ConfiguracionGeneral
 )
 
 class BootstrapModelForm(forms.ModelForm):
@@ -506,11 +506,6 @@ class PrestamoForm(BootstrapModelForm):
         queryset=Material.objects.none(),
         label='Material'
     )
-    cantidad = forms.IntegerField(
-        min_value=1,
-        initial=1,
-        label='Cantidad a prestar'
-    )
     numero_entrada = forms.MultipleChoiceField(
         required=False,
         label='Número de Entrada',
@@ -519,7 +514,7 @@ class PrestamoForm(BootstrapModelForm):
 
     class Meta:
         model = Prestamo
-        fields = ['ALUMNOS_id_alumno', 'MATERIALES_id_material', 'cantidad', 'numero_entrada']
+        fields = ['ALUMNOS_id_alumno', 'MATERIALES_id_material', 'numero_entrada']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -528,10 +523,6 @@ class PrestamoForm(BootstrapModelForm):
         self._optimize_queryset('ALUMNOS_id_alumno', Alumno)
         self._optimize_queryset('MATERIALES_id_material', Material)
         
-        # Set required fields
-        if 'cantidad' in self.fields:
-            self.fields['cantidad'].required = True
-            
         material_id = None
         if self.is_bound:
             material_id = self.data.get('MATERIALES_id_material')
@@ -569,7 +560,6 @@ class PrestamoForm(BootstrapModelForm):
         cleaned_data = super().clean()
         alumno = cleaned_data.get('ALUMNOS_id_alumno')
         material = cleaned_data.get('MATERIALES_id_material')
-        cantidad = cleaned_data.get('cantidad')
         ne_list = cleaned_data.get('numero_entrada')
 
         if alumno:
@@ -582,26 +572,32 @@ class PrestamoForm(BootstrapModelForm):
             disp = material.cantidad_disponible
             if self.instance and self.instance.pk:
                 if self.instance.MATERIALES_id_material == material:
-                    disp += self.instance.cantidad
+                    disp += 1
 
-            if cantidad and cantidad > disp:
-                self.add_error('cantidad', f"No hay stock suficiente. Máximo disponible: {disp}.")
+            if 1 > disp:
+                self.add_error('MATERIALES_id_material', "No hay stock suficiente. Material no disponible.")
 
             total_numeros = material.lista_numeros_entrada
-            if total_numeros:
+            
+            # Si el libro tiene varias existencias, es obligatorio poner qué número de entrada se lleva.
+            if material.cantidad_total > 1:
                 if not ne_list:
-                    self.add_error('numero_entrada', "Este material requiere seleccionar al menos un número de entrada.")
+                    self.add_error('numero_entrada', "Este material tiene varias existencias. Debe seleccionar qué número de entrada se está llevando.")
+            
+            # Si tiene 1 sola existencia y no se seleccionó entrada, la asignamos automáticamente
+            if not ne_list and len(total_numeros) == 1:
+                ne_list = total_numeros
+
+            if ne_list:
+                if len(ne_list) != 1:
+                    self.add_error('numero_entrada', "Debe seleccionar exactamente 1 número de entrada.")
                 else:
-                    if cantidad and len(ne_list) != cantidad:
-                        self.add_error('numero_entrada', f"Debe seleccionar exactamente {cantidad} número(s) de entrada para la cantidad ingresada.")
-                    
-                    disponibles = material.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
-                    current_ne = getattr(self.instance, 'numero_entrada', None)
-                    current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
-                    
-                    for ne in ne_list:
-                        if ne not in disponibles and ne not in current_nes:
-                            self.add_error('numero_entrada', f"El número de entrada '{ne}' ya se encuentra prestado o no existe.")
+                     disponibles = material.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
+                     current_ne = getattr(self.instance, 'numero_entrada', None)
+                     current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+                     ne = ne_list[0]
+                     if ne not in disponibles and ne not in current_nes:
+                         self.add_error('numero_entrada', f"El número de entrada '{ne}' ya se encuentra prestado o no existe.")
                             
         # Convert list to comma-separated string for saving to CharField
         if isinstance(ne_list, list):
@@ -719,7 +715,7 @@ class PrestamoModelChoiceField(forms.ModelChoiceField):
         entrada_str = f" [N° Entrada: {obj.numero_entrada}]" if obj.numero_entrada else ""
         return f"Préstamo #{obj.id_prestamo} - Alumno: {obj.ALUMNOS_id_alumno.nombre} {obj.ALUMNOS_id_alumno.apellido} (Cédula: {cedula}) — Material: {obj.MATERIALES_id_material.titulo}{entrada_str} (Vence: {obj.fecha_vencimiento.strftime('%d/%m/%Y')})"
 
-class DevolucionForm(BootstrapModelForm):
+class DevolucionForm(forms.Form):
     prestamos_id_prestamo = PrestamoModelChoiceField(
         queryset=Prestamo.objects.none(),
         label='Préstamo'
@@ -740,14 +736,34 @@ class DevolucionForm(BootstrapModelForm):
         label='Estado del Material',
         widget=forms.Select(attrs={'id': 'id_estado_material'})
     )
-
-    class Meta:
-        model = Devolucion
-        fields = ['prestamos_id_prestamo', 'estado_material', 'multa', 'pago_multa', 'observaciones']
+    observaciones = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3}),
+        label='Observaciones'
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._optimize_queryset('prestamos_id_prestamo', Prestamo)
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect, forms.CheckboxSelectMultiple)):
+                field.widget.attrs['class'] = 'form-check-input'
+            elif isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
+                field.widget.attrs['class'] = 'form-select'
+            else:
+                field.widget.attrs['class'] = 'form-control'
+
+        # Get selected prestamo ID either from bound data or initial
+        prestamo_id = None
+        if self.is_bound:
+            prestamo_id = self.data.get('prestamos_id_prestamo')
+        if not prestamo_id:
+            prestamo_id = self.initial.get('prestamos_id_prestamo')
+
+        if prestamo_id:
+            self.fields['prestamos_id_prestamo'].queryset = Prestamo.objects.filter(pk=prestamo_id)
+            self.fields['prestamos_id_prestamo'].disabled = True
+        else:
+            self.fields['prestamos_id_prestamo'].queryset = Prestamo.objects.none()
 
 
 class ConfiguracionGeneralForm(BootstrapModelForm):

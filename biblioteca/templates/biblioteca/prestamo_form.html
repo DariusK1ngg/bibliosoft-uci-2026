@@ -134,17 +134,8 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Cantidad -->
-                        <div class="col-md-6">
-                            <label for="{{ form.cantidad.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.cantidad.label }}</label>
-                            {{ form.cantidad }}
-                            {% for error in form.cantidad.errors %}
-                                <div class="text-danger small mt-1 fw-medium"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
                         <!-- Número de Entrada -->
-                        <div class="col-md-6" id="seccion_numero_entrada" style="display: none;">
+                        <div class="col-12" id="seccion_numero_entrada" style="display: none;">
                             <label for="{{ form.numero_entrada.id_for_label }}" class="form-label fw-semibold text-dark">{{ form.numero_entrada.label }}</label>
                             {{ form.numero_entrada }}
                             <div class="form-text text-muted small mt-1">
@@ -213,13 +204,13 @@
             console.error("Error initializing Alumno TomSelect:", e);
         }
  
-        // Initialize Tom Select for Numero Entrada (Multiple Selection)
+        // Initialize Tom Select for Numero Entrada (Single Selection)
         try {
             tsNumeroEntrada = new TomSelect("#id_numero_entrada", {
                 create: false,
-                placeholder: "Seleccione los números de entrada...",
+                placeholder: "Seleccione el número de entrada...",
                 plugins: ['remove_button'],
-                maxItems: null,
+                maxItems: 1,
                 onItemAdd: function() {
                     this.setTextboxValue('');
                     this.refreshOptions(false);
@@ -231,18 +222,10 @@
  
         // Elements
         const selectMaterial = document.getElementById('id_MATERIALES_id_material');
-        const inputCantidad = document.getElementById('id_cantidad');
         const selectNumeroEntrada = document.getElementById('id_numero_entrada');
         const seccionNumeroEntrada = document.getElementById('seccion_numero_entrada');
         const materialStockLabel = document.getElementById('material_stock_label');
         const materialStockCount = document.getElementById('material_stock_count');
- 
-        // Prevent mouse wheel scrolling from changing input quantity value
-        if (inputCantidad) {
-            inputCantidad.addEventListener('wheel', function(e) {
-                e.preventDefault();
-            }, { passive: false });
-        }
  
         // Function to update dynamic fields when material changes
         function handleMaterialChange(materialId, isInitial = false) {
@@ -268,8 +251,6 @@
                 .then(material => {
                     materialStockCount.textContent = material.disponible !== undefined ? material.disponible : '0';
                     materialStockLabel.style.display = 'block';
- 
-                    if (inputCantidad) inputCantidad.max = material.disponible || 1;
  
                     const numeros = material.numeros;
                     if (numeros && numeros.length > 0) {

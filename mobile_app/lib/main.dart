@@ -14,15 +14,26 @@ class BibliosoftApp extends StatelessWidget {
       title: 'Bibliosoft 2.0',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        primaryColor: Colors.indigo.shade800,
-        scaffoldBackgroundColor: Colors.grey.shade100,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.indigo.shade800,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF004EA2),
+          primary: const Color(0xFF004EA2),
+        ),
+        primaryColor: const Color(0xFF004EA2),
+        scaffoldBackgroundColor: const Color(0xFFF0F4F9),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF004EA2),
           foregroundColor: Colors.white,
           centerTitle: true,
+          elevation: 2,
         ),
-        fontFamily: 'Roboto', // Familia de fuente genérica y limpia
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+            side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          ),
+        ),
       ),
       home: const SearchScreen(),
     );

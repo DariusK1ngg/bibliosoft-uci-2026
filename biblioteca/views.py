@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, DetailView, FormView
 from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone
@@ -9,7 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from .models import (
     Material, Alumno, Prestamo, Autor, Editorial, Categoria, Genero,
-    TipoDocumento, Facultad, Carrera, Devolucion, ConfiguracionGeneral, BajaMaterial,
+    TipoDocumento, Facultad, Carrera, ConfiguracionGeneral, BajaMaterial,
     RegistroAuditoria
 )
 from .forms import (
@@ -798,28 +798,27 @@ class CarreraDeleteView(BaseCatalogDeleteView):
 
 
 class DevolucionListView(LoginRequiredMixin, ListView):
-    model = Devolucion
+    model = Prestamo
     template_name = 'biblioteca/devolucion_list.html'
     context_object_name = 'devoluciones'
     paginate_by = 15
 
     def get_queryset(self):
-        queryset = Devolucion.objects.all().select_related(
-            'prestamos_id_prestamo__ALUMNOS_id_alumno', 
-            'prestamos_id_prestamo__MATERIALES_id_material'
-        ).order_by('-id_devolucion')
+        queryset = Prestamo.objects.filter(estado='DEVUELTO').select_related(
+            'ALUMNOS_id_alumno', 
+            'MATERIALES_id_material'
+        ).order_by('-fecha_devolucion')
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
-                Q(id_devolucion__icontains=q) |
-                Q(prestamos_id_prestamo__id_prestamo__icontains=q) |
-                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__nombre__icontains=q) |
-                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__apellido__icontains=q) |
-                Q(prestamos_id_prestamo__ALUMNOS_id_alumno__matricula__icontains=q) |
-                Q(prestamos_id_prestamo__MATERIALES_id_material__titulo__icontains=q) |
-                Q(prestamos_id_prestamo__numero_entrada__icontains=q) |
+                Q(id_prestamo__icontains=q) |
+                Q(ALUMNOS_id_alumno__nombre__icontains=q) |
+                Q(ALUMNOS_id_alumno__apellido__icontains=q) |
+                Q(ALUMNOS_id_alumno__matricula__icontains=q) |
+                Q(MATERIALES_id_material__titulo__icontains=q) |
+                Q(numero_entrada__icontains=q) |
                 Q(estado_material__icontains=q) |
-                Q(observaciones__icontains=q)
+                Q(observaciones_devolucion__icontains=q)
             )
         return queryset
 
@@ -829,15 +828,21 @@ class DevolucionListView(LoginRequiredMixin, ListView):
         context['recargo_activo'] = config.recargo_activo
         return context
 
-class DevolucionCreateView(LoginRequiredMixin, CreateView):
-    model = Devolucion
+class DevolucionCreateView(LoginRequiredMixin, FormView):
     form_class = DevolucionForm
     template_name = 'biblioteca/devolucion_form.html'
-    success_url = reverse_lazy('devolucion-list')
+    success_url = reverse_lazy('prestamo-list')
+
+    def dispatch(self, request, *args, **kwargs):
+        prestamo_id = request.GET.get('prestamo') or request.POST.get('prestamos_id_prestamo')
+        if not prestamo_id:
+            messages.error(request, "Debe seleccionar un préstamo activo desde el listado de préstamos para registrar una devolución.")
+            return redirect('prestamo-list')
+        return super().dispatch(request, *args, **kwargs)
 
     def get_initial(self):
         initial = super().get_initial()
-        prestamo_id = self.request.GET.get('prestamo')
+        prestamo_id = self.request.GET.get('prestamo') or self.request.POST.get('prestamos_id_prestamo')
         if prestamo_id:
             initial['prestamos_id_prestamo'] = prestamo_id
         return initial
@@ -850,11 +855,43 @@ class DevolucionCreateView(LoginRequiredMixin, CreateView):
         context['prestamos_json'] = "{}"
         context['hoy'] = timezone.localdate().strftime('%Y-%m-%d')
         
+        prestamo_id = self.request.GET.get('prestamo') or self.request.POST.get('prestamos_id_prestamo')
+        selected_prestamo = None
+        if prestamo_id:
+            try:
+                selected_prestamo = Prestamo.objects.select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material').get(pk=prestamo_id)
+            except Prestamo.DoesNotExist:
+                pass
+        context['selected_prestamo'] = selected_prestamo
+        
         # Add dynamic configuration for Javascript
         config = ConfiguracionGeneral.get_solo()
         context['recargo_activo'] = config.recargo_activo
         context['monto_recargo'] = int(config.monto_recargo)
         return context
+
+    def form_valid(self, form):
+        prestamo = form.cleaned_data['prestamos_id_prestamo']
+        prestamo.estado = 'DEVUELTO'
+        prestamo.fecha_devolucion = timezone.localdate()
+        prestamo.estado_material = form.cleaned_data['estado_material']
+        prestamo.multa = form.cleaned_data['multa'] or 0
+        prestamo.pago_multa = form.cleaned_data['pago_multa'] or False
+        prestamo.observaciones_devolucion = form.cleaned_data['observaciones'] or ''
+        prestamo.save()
+        
+        messages.success(self.request, f"Se registró la devolución del material '{prestamo.MATERIALES_id_material.titulo}' con éxito.")
+        
+        # Registrar en auditoria
+        RegistroAuditoria.objects.create(
+            usuario=self.request.user,
+            accion='MODIFICACION',
+            tabla='Préstamo',
+            registro_id=str(prestamo.pk),
+            detalle=f"Devolución registrada para préstamo #{prestamo.pk}. Multa: {prestamo.multa}. ¿Pagó?: {'Sí' if prestamo.pago_multa else 'No'}.",
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+        return redirect(self.success_url)
 
 
 class ConfiguracionGeneralUpdateView(LoginRequiredMixin, UpdateView):
@@ -1198,7 +1235,7 @@ class BuscarOpcionesView(LoginRequiredMixin, View):
                         try:
                             p = Prestamo.objects.get(pk=exclude_prestamo_id)
                             if p.MATERIALES_id_material == m:
-                                disp += p.cantidad
+                                disp += 1
                         except Prestamo.DoesNotExist:
                             pass
                     return JsonResponse({

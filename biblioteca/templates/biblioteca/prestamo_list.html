@@ -41,10 +41,9 @@
                 <tr>
                     <th class="text-center" width="5%">ID</th>
                     <th width="20%">ALUMNO</th>
-                    <th width="25%">MATERIAL</th>
-                    <th class="text-center" width="8%">CANTIDAD</th>
-                    <th width="12%">FECHA PRESTADO</th>
-                    <th width="12%">FECHA VENCIMIENTO</th>
+                    <th width="30%">MATERIAL</th>
+                    <th width="15%">FECHA PRESTADO</th>
+                    <th width="15%">FECHA VENCIMIENTO</th>
                     <th class="text-center" width="10%">ESTADO</th>
                     <th class="text-center" width="8%">ACCIONES</th>
                 </tr>
@@ -60,7 +59,6 @@
                     <td>
                         <div class="fw-medium text-dark"><i class="fas fa-book me-1 text-primary opacity-75"></i> {{ prestamo.MATERIALES_id_material.titulo }}</div>
                     </td>
-                    <td class="text-center fw-semibold text-dark">{{ prestamo.cantidad }}</td>
                     <td>
                         <span class="text-dark fw-medium">{{ prestamo.fecha_prestamo|date:"d/m/Y" }}</span>
                         {% if prestamo.prorrogado %}
@@ -141,7 +139,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-5">
+                    <td colspan="7" class="text-center text-muted py-5">
                         <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
                         <p class="mb-0">No hay registros de préstamos activos.</p>
                     </td>

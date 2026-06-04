@@ -11,7 +11,7 @@
             </div>
             <h3 class="fw-bold mb-3 text-dark">¿Confirmar Eliminación?</h3>
             <p class="text-muted mb-4">¿Estás seguro de que deseas eliminar el préstamo <strong>#{{ object.id_prestamo }}</strong> de <strong>"{{ object.MATERIALES_id_material.titulo }}"</strong> para el alumno <strong>"{{ object.ALUMNOS_id_alumno.nombre }} {{ object.ALUMNOS_id_alumno.apellido }}"</strong>?</p>
-            <p class="text-danger fw-semibold mb-4"><i class="fas fa-info-circle me-1"></i> Esta acción restaurará la cantidad de {{ object.cantidad }} copia(s) al stock disponible del material.</p>
+            <p class="text-danger fw-semibold mb-4"><i class="fas fa-info-circle me-1"></i> Esta acción restaurará la copia al stock disponible del material.</p>
             
             <form method="post">
                 {% csrf_token %}

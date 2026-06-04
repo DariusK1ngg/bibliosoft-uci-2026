@@ -16,7 +16,7 @@
                     <thead>
                         <tr style="background-color: #f8fafc; border-bottom: 2px solid var(--border);">
                             <th width="65%" style="padding: 1.25rem 1.5rem; font-weight: 700; color: #495057; font-size: 0.85rem; text-transform: uppercase;">Reportes</th>
-                            <th width="35%" style="padding: 1.25rem 1.5rem; font-weight: 700; color: #495057; font-size: 0.85rem; text-transform: uppercase; text-align: center;">Imprimir</th>
+                            <th width="35%" style="padding: 1.25rem 1.5rem; font-weight: 700; color: #495057; font-size: 0.85rem; text-transform: uppercase; text-align: center;">Descargar PDF</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -27,8 +27,8 @@
                                 <div class="text-muted small">Ordenados Alfabéticamente</div>
                             </td>
                             <td style="padding: 1.25rem 1.5rem; text-align: center;">
-                                <a href="{% url 'reporte-print' %}?tipo=alumnos_alfa" target="_blank" class="btn btn-print-icon" title="Imprimir Reporte">
-                                    <i class="fas fa-print"></i>
+                                <a href="{% url 'reporte-print' %}?tipo=alumnos_alfa" target="_blank" class="btn btn-print-icon" title="Descargar PDF">
+                                    <i class="fas fa-file-pdf"></i>
                                 </a>
                             </td>
                         </tr>
@@ -40,8 +40,8 @@
                                 <div class="text-muted small">Por Carreras, Ordenados Alfabéticamente</div>
                             </td>
                             <td style="padding: 1.25rem 1.5rem; text-align: center;">
-                                <a href="{% url 'reporte-print' %}?tipo=alumnos_carrera" target="_blank" class="btn btn-print-icon" title="Imprimir Reporte">
-                                    <i class="fas fa-print"></i>
+                                <a href="{% url 'reporte-print' %}?tipo=alumnos_carrera" target="_blank" class="btn btn-print-icon" title="Descargar PDF">
+                                    <i class="fas fa-file-pdf"></i>
                                 </a>
                             </td>
                         </tr>
@@ -63,8 +63,8 @@
                                         <label class="small text-muted mb-0 fw-semibold">Fecha Fin:</label>
                                         <input type="date" name="fecha_fin" required class="form-control form-control-sm" style="font-size: 0.85rem;">
                                     </div>
-                                    <button type="submit" class="btn btn-print-icon mt-1" title="Imprimir Reporte">
-                                        <i class="fas fa-print"></i>
+                                    <button type="submit" class="btn btn-print-icon mt-1" title="Descargar PDF">
+                                        <i class="fas fa-file-pdf"></i>
                                     </button>
                                 </form>
                             </td>
@@ -77,8 +77,8 @@
                                 <div class="text-muted small">Pendientes</div>
                             </td>
                             <td style="padding: 1.25rem 1.5rem; text-align: center;">
-                                <a href="{% url 'reporte-print' %}?tipo=prestamos_pendientes" target="_blank" class="btn btn-print-icon" title="Imprimir Reporte">
-                                    <i class="fas fa-print"></i>
+                                <a href="{% url 'reporte-print' %}?tipo=prestamos_pendientes" target="_blank" class="btn btn-print-icon" title="Descargar PDF">
+                                    <i class="fas fa-file-pdf"></i>
                                 </a>
                             </td>
                         </tr>
@@ -99,8 +99,8 @@
                                             {% endfor %}
                                         </select>
                                     </div>
-                                    <button type="submit" class="btn btn-print-icon mt-1" title="Imprimir Reporte">
-                                        <i class="fas fa-print"></i>
+                                    <button type="submit" class="btn btn-print-icon mt-1" title="Descargar PDF">
+                                        <i class="fas fa-file-pdf"></i>
                                     </button>
                                 </form>
                             </td>
@@ -122,8 +122,8 @@
                                             {% endfor %}
                                         </select>
                                     </div>
-                                    <button type="submit" class="btn btn-print-icon mt-1" title="Imprimir Reporte">
-                                        <i class="fas fa-print"></i>
+                                    <button type="submit" class="btn btn-print-icon mt-1" title="Descargar PDF">
+                                        <i class="fas fa-file-pdf"></i>
                                     </button>
                                 </form>
                             </td>

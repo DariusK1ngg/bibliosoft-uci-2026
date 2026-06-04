@@ -8,6 +8,8 @@ class MaterialModel {
   final int cantidadDisponible;
   final String isbn;
   final String tipoDocumento;
+  final String tipoRegistro; // Added to identify Libro, Tesis/Trabajo, and Otros
+  final String numeracionDewey; // Added for Dewey classification
 
   MaterialModel({
     required this.id,
@@ -19,6 +21,8 @@ class MaterialModel {
     required this.cantidadDisponible,
     required this.isbn,
     required this.tipoDocumento,
+    required this.tipoRegistro,
+    required this.numeracionDewey,
   });
 
   factory MaterialModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +45,8 @@ class MaterialModel {
       cantidadDisponible: json['cantidad_disponible'] ?? 0,
       isbn: json['isbn'] ?? 'No especificado',
       tipoDocumento: json['tipodocumento_id_tipo'] ?? 'No especificado',
+      tipoRegistro: json['tipo_registro'] ?? 'LIBRO',
+      numeracionDewey: json['numeracion_dewey'] ?? 'S/N',
     );
   }
 }

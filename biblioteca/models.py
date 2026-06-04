@@ -172,7 +172,7 @@ class Alumno(models.Model):
 # 4. Inventario (Acervo Bibliográfico)
 class Material(models.Model):
     id_material = models.AutoField(primary_key=True)
-    titulo = models.CharField(max_length=200, verbose_name='Título')
+    titulo = models.CharField(max_length=400, verbose_name='Título')
     autores_id_autor = models.ManyToManyField(Autor, blank=True, verbose_name='Autor/es')
     editoriales_id_editorial = models.ForeignKey(Editorial, on_delete=models.SET_NULL, null=True, blank=True, db_column='editoriales_id_editorial', verbose_name='Editorial')
     categorias_id_categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, db_column='categorias_id_categoria', verbose_name='Categoría')
@@ -353,9 +353,22 @@ class Prestamo(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS, default='ACTIVO', verbose_name='Estado')
     
     # Nuevos campos
-    cantidad = models.IntegerField(default=1, verbose_name='Cantidad prestada')
     numero_entrada = models.CharField(max_length=100, blank=True, null=True, verbose_name='Número de entrada')
     prorrogado = models.BooleanField(default=False, verbose_name='Prorrogado')
+
+    # Atributos de Devolución unificados
+    fecha_devolucion = models.DateField(null=True, blank=True, verbose_name='Fecha de Devolución')
+    observaciones_devolucion = models.TextField(blank=True, null=True, verbose_name='Observaciones de Devolución')
+    multa = models.DecimalField(max_digits=8, decimal_places=0, default=0, verbose_name='Multa')
+    estado_material = models.CharField(
+        max_length=50, 
+        choices=[('BUENO', 'Bueno'), ('REGULAR', 'Regular'), ('MALO', 'Malo')], 
+        default='BUENO', 
+        null=True, 
+        blank=True, 
+        verbose_name='Estado del Material'
+    )
+    pago_multa = models.BooleanField(default=False, verbose_name='¿Pagó la Multa?')
 
     class Meta:
         verbose_name = 'Préstamo'
@@ -370,9 +383,28 @@ class Prestamo(models.Model):
             return []
         return [x.strip() for x in self.numero_entrada.split(',') if x.strip()]
 
+    # Aliases de compatibilidad para Devolución
+    @property
+    def id_devolucion(self):
+        return self.id_prestamo
+
+    @property
+    def prestamos_id_prestamo(self):
+        return self
+
+    @property
+    def observaciones(self):
+        return self.observaciones_devolucion
+
+    @property
+    def devolucion(self):
+        if self.estado == 'DEVUELTO':
+            return self
+        return None
+
     def delete(self, *args, **kwargs):
         if self.estado in ['ACTIVO', 'VENCIDO']:
-            self.MATERIALES_id_material.cantidad_disponible += self.cantidad
+            self.MATERIALES_id_material.cantidad_disponible += 1
             self.MATERIALES_id_material.save()
         super().delete(*args, **kwargs)
 
@@ -386,23 +418,46 @@ class Prestamo(models.Model):
 
         if is_new:
             # Validar disponibilidad
-            if self.MATERIALES_id_material.cantidad_disponible < self.cantidad:
+            if self.MATERIALES_id_material.cantidad_disponible < 1:
                 raise ValidationError("No hay stock disponible suficiente para este material.")
             # Decrementar cantidad disponible
-            self.MATERIALES_id_material.cantidad_disponible -= self.cantidad
+            self.MATERIALES_id_material.cantidad_disponible -= 1
             self.MATERIALES_id_material.save()
         else:
-            # Handle case where material or quantity was changed during edit
             orig = Prestamo.objects.get(pk=self.pk)
-            if orig.MATERIALES_id_material != self.MATERIALES_id_material or orig.cantidad != self.cantidad:
-                # Return stock to the previous material
-                orig.MATERIALES_id_material.cantidad_disponible += orig.cantidad
-                orig.MATERIALES_id_material.save()
-                # Deduct stock from the new material
-                if self.MATERIALES_id_material.cantidad_disponible < self.cantidad:
-                    raise ValidationError("No hay stock disponible suficiente para este material.")
-                self.MATERIALES_id_material.cantidad_disponible -= self.cantidad
+            # Manejar la devolución
+            if orig.estado in ['ACTIVO', 'VENCIDO'] and self.estado == 'DEVUELTO':
+                self.MATERIALES_id_material.cantidad_disponible += 1
                 self.MATERIALES_id_material.save()
+                if not self.fecha_devolucion:
+                    self.fecha_devolucion = timezone.localdate()
+                if self.multa == 0:
+                    config = ConfiguracionGeneral.get_solo()
+                    if config.recargo_activo and self.fecha_vencimiento < self.fecha_devolucion:
+                        dias_retraso = (self.fecha_devolucion - self.fecha_vencimiento).days
+                        self.multa = dias_retraso * config.monto_recargo
+                    else:
+                        self.multa = 0
+            # Si se vuelve a activar un préstamo ya devuelto
+            elif orig.estado == 'DEVUELTO' and self.estado in ['ACTIVO', 'VENCIDO']:
+                if self.MATERIALES_id_material.cantidad_disponible < 1:
+                    raise ValidationError("No hay stock disponible suficiente para activar este préstamo.")
+                self.MATERIALES_id_material.cantidad_disponible -= 1
+                self.MATERIALES_id_material.save()
+                self.fecha_devolucion = None
+                self.observaciones_devolucion = ""
+                self.multa = 0
+                self.pago_multa = False
+                self.estado_material = 'BUENO'
+            # Si cambia el material en un préstamo activo
+            elif orig.MATERIALES_id_material != self.MATERIALES_id_material:
+                if orig.estado in ['ACTIVO', 'VENCIDO']:
+                    orig.MATERIALES_id_material.cantidad_disponible += 1
+                    orig.MATERIALES_id_material.save()
+                    if self.MATERIALES_id_material.cantidad_disponible < 1:
+                        raise ValidationError("No hay stock disponible suficiente para este material.")
+                    self.MATERIALES_id_material.cantidad_disponible -= 1
+                    self.MATERIALES_id_material.save()
 
         super().save(*args, **kwargs)
 
@@ -410,51 +465,6 @@ class Prestamo(models.Model):
     def actualizar_vencidos(cls):
         from django.utils import timezone
         cls.objects.filter(estado='ACTIVO', fecha_vencimiento__lt=timezone.localdate()).update(estado='VENCIDO')
-
-class Devolucion(models.Model):
-    id_devolucion = models.AutoField(primary_key=True)
-    prestamos_id_prestamo = models.OneToOneField(Prestamo, on_delete=models.PROTECT, db_column='prestamos_id_prestamo', verbose_name='Préstamo')
-    fecha_devolucion = models.DateField(auto_now_add=True, verbose_name='Fecha de Devolución')
-    observaciones = models.TextField(blank=True, verbose_name='Observaciones')
-    multa = models.DecimalField(max_digits=8, decimal_places=0, default=0, verbose_name='Multa')
-    
-    estado_material = models.CharField(
-        max_length=50, 
-        choices=[('BUENO', 'Bueno'), ('REGULAR', 'Regular'), ('MALO', 'Malo')], 
-        default='BUENO', 
-        verbose_name='Estado del Material'
-    )
-    pago_multa = models.BooleanField(default=False, verbose_name='¿Pagó la Multa?')
-
-    class Meta:
-        verbose_name = 'Devolución'
-        verbose_name_plural = 'Devoluciones'
-
-    def __str__(self):
-        return f"Devolución de Préstamo {self.prestamos_id_prestamo.id_prestamo}"
-
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        if is_new:
-            # Calcular multa automáticamente
-            from django.utils import timezone
-            prestamo = self.prestamos_id_prestamo
-            config = ConfiguracionGeneral.get_solo()
-            if config.recargo_activo and prestamo.fecha_vencimiento < timezone.localdate():
-                dias_retraso = (timezone.localdate() - prestamo.fecha_vencimiento).days
-                self.multa = dias_retraso * config.monto_recargo
-            else:
-                self.multa = 0
-                self.pago_multa = False  # Si no hay multa, se guarda por defecto falso/no aplica
-
-        super().save(*args, **kwargs)
-        if is_new:
-            # Lógica requerida: Sumar la cantidad del préstamo a la cantidad disponible y cambiar estado a 'DEVUELTO'
-            self.prestamos_id_prestamo.estado = 'DEVUELTO'
-            self.prestamos_id_prestamo.save()
-            
-            self.prestamos_id_prestamo.MATERIALES_id_material.cantidad_disponible += self.prestamos_id_prestamo.cantidad
-            self.prestamos_id_prestamo.MATERIALES_id_material.save()
 
 
 class ConfiguracionGeneral(models.Model):

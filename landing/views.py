@@ -20,6 +20,7 @@ def catalogo(request):
     editorial_id = request.GET.get('editorial', '')
     solo_disponibles = request.GET.get('disponible', '')
     orden = request.GET.get('orden', '')
+    tipo_registro = request.GET.get('tipo_registro', '')
 
     materiales = Material.objects.all().select_related(
         'editoriales_id_editorial',
@@ -50,6 +51,9 @@ def catalogo(request):
 
     if editorial_id:
         materiales = materiales.filter(editoriales_id_editorial=editorial_id)
+
+    if tipo_registro:
+        materiales = materiales.filter(tipo_registro=tipo_registro)
 
     if solo_disponibles == '1':
         materiales = materiales.filter(cantidad_disponible__gt=0)
@@ -100,6 +104,7 @@ def catalogo(request):
         'selected_carrera': int(carrera_id) if carrera_id and carrera_id.isdigit() else None,
         'selected_facultad': int(facultad_id) if facultad_id.isdigit() else None,
         'selected_editorial': int(editorial_id) if editorial_id.isdigit() else None,
+        'selected_tipo_registro': tipo_registro,
         'solo_disponibles': solo_disponibles == '1',
         'selected_orden': orden,
     }
