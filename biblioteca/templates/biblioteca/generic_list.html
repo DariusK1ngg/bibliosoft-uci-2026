@@ -16,8 +16,19 @@
         </div>
 
         <div class="card-custom">
-            <div class="card-header-custom bg-white d-flex justify-content-between align-items-center">
+            <div class="card-header-custom bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="mb-0 text-dark fw-bold">Listado de {{ title }}</h5>
+                
+                <!-- Formulario de búsqueda -->
+                <form action="" method="get" class="d-flex" style="max-width: 300px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control bg-light border-start-0 ps-0" placeholder="Buscar...">
+                        {% if request.GET.q %}
+                            <a href="?" class="btn btn-sm btn-light border-start-0 border d-flex align-items-center" title="Limpiar"><i class="fas fa-times"></i></a>
+                        {% endif %}
+                    </div>
+                </form>
             </div>
             
             <div class="table-responsive">
@@ -77,6 +88,55 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Paginación -->
+            {% if is_paginated %}
+            <div class="card-footer-custom bg-white d-flex justify-content-center py-3 border-top">
+                <nav aria-label="Navegación de páginas">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;</span>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link bg-primary border-primary text-white">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 or num == 1 or num == page_obj.paginator.num_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% elif num == page_obj.number|add:-3 or num == page_obj.number|add:3 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Siguiente">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

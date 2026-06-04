@@ -169,64 +169,73 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const prestamosData = JSON.parse(document.getElementById('prestamos-data').textContent);
         const serverTodayStr = "{{ hoy }}"; // YYYY-MM-DD
         const serverToday = new Date(serverTodayStr + "T00:00:00");
-
+ 
         const recargoActivo = "{{ recargo_activo }}" === "True";
         const montoRecargo = parseInt("{{ monto_recargo }}", 10);
-
+ 
         const selectElement = document.getElementById('id_prestamos_id_prestamo');
         const inputMulta = document.getElementById('id_multa');
         const inputPagoMulta = document.getElementById('id_pago_multa');
-
+ 
         const cardMulta = document.getElementById('seccion_multa_card');
         const textRetrasoDias = document.getElementById('retraso_dias');
         const textMultaDisplay = document.getElementById('multa_display');
-
+ 
         const btnPagoSi = document.getElementById('btn_pago_si');
         const btnPagoNo = document.getElementById('btn_pago_no');
-
+ 
         // Set dynamic recargo label
         const labelMontoRecargo = document.getElementById('monto_recargo_label');
         if (labelMontoRecargo) {
             labelMontoRecargo.textContent = montoRecargo.toLocaleString('es-PY');
         }
-
+ 
         // Function to update Multa UI state
         function updateMultaState() {
             const loanId = selectElement.value;
-            if (!loanId || !prestamosData[loanId] || !recargoActivo) {
+            if (!loanId || !recargoActivo) {
                 cardMulta.style.display = 'none';
                 inputMulta.value = 0;
                 setPaymentStatus(false);
                 return;
             }
-
-            const loan = prestamosData[loanId];
-            const due_date = new Date(loan.vencimiento + "T00:00:00");
-            
-            // Calculate differences in calendar days
-            const diffTime = serverToday - due_date;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays > 0) {
-                const totalFine = diffDays * montoRecargo;
-                inputMulta.value = totalFine;
-
-                // Update UI text labels
-                textRetrasoDias.textContent = diffDays;
-                textMultaDisplay.textContent = totalFine.toLocaleString('es-PY') + " Gs";
-                
-                // Show Multa card
-                cardMulta.style.display = 'block';
-            } else {
-                cardMulta.style.display = 'none';
-                inputMulta.value = 0;
-                setPaymentStatus(false);
-            }
+ 
+            var url = "{% url 'buscar-opciones' %}?model=prestamo_detalle&pk=" + loanId;
+            fetch(url)
+                .then(response => response.json())
+                .then(loan => {
+                    const due_date = new Date(loan.vencimiento + "T00:00:00");
+                    
+                    // Calculate differences in calendar days
+                    const diffTime = serverToday - due_date;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+ 
+                    if (diffDays > 0) {
+                        const totalFine = diffDays * montoRecargo;
+                        inputMulta.value = totalFine;
+ 
+                        // Update UI text labels
+                        textRetrasoDias.textContent = diffDays;
+                        textMultaDisplay.textContent = totalFine.toLocaleString('es-PY') + " Gs";
+                        
+                        // Show Multa card
+                        cardMulta.style.display = 'block';
+                    } else {
+                        cardMulta.style.display = 'none';
+                        inputMulta.value = 0;
+                        setPaymentStatus(false);
+                    }
+                })
+                .catch(err => {
+                    console.error("Error loading loan details:", err);
+                    cardMulta.style.display = 'none';
+                    inputMulta.value = 0;
+                    setPaymentStatus(false);
+                });
         }
-
+ 
         // Helper to control the hidden pago_multa checkbox and UI buttons
         function setPaymentStatus(isPaid) {
             inputPagoMulta.checked = isPaid;
@@ -242,22 +251,36 @@
                 btnPagoNo.classList.remove('btn-outline-danger');
             }
         }
-
+ 
         // Listen for button group selections
         btnPagoSi.addEventListener('click', function() {
             setPaymentStatus(true);
         });
-
+ 
         btnPagoNo.addEventListener('click', function() {
             setPaymentStatus(false);
         });
-
+ 
         // Initialize Tom Select
         const ts = new TomSelect("#id_prestamos_id_prestamo", {
+            valueField: 'value',
+            labelField: 'text',
+            searchField: 'text',
             create: false,
             placeholder: "Busque y seleccione un préstamo...",
             allowEmptyOption: false,
             maxOptions: 100,
+            preload: 'focus',
+            shouldLoad: function(query) {
+                return true;
+            },
+            load: function(query, callback) {
+                var url = "{% url 'buscar-opciones' %}?model=prestamo&q=" + encodeURIComponent(query);
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => callback(json))
+                    .catch(() => callback());
+            },
             onItemAdd: function() {
                 this.setTextboxValue('');
                 this.refreshOptions(false);
@@ -266,7 +289,7 @@
                 updateMultaState();
             }
         });
-
+ 
         if (ts && ts.control_input) {
             ts.control_input.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -278,7 +301,7 @@
                 }
             });
         }
-
+ 
         // Initial check on load (handles cases where a préstamo is pre-selected)
         updateMultaState();
     });

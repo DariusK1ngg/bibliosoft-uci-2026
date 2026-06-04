@@ -499,10 +499,24 @@
         const careerSelect = document.querySelector('#id_carreras_id_carrera');
         if (careerSelect) {
             const ts = new TomSelect(careerSelect, {
+                valueField: 'value',
+                labelField: 'text',
+                searchField: 'text',
                 create: false,
                 placeholder: "Seleccione una carrera...",
                 allowEmptyOption: false,
                 maxOptions: 100,
+                preload: 'focus',
+                shouldLoad: function(query) {
+                    return true;
+                },
+                load: function(query, callback) {
+                    var url = "{% url 'buscar-opciones' %}?model=carrera&q=" + encodeURIComponent(query);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(json => callback(json))
+                        .catch(() => callback());
+                },
                 onItemAdd: function() {
                     this.setTextboxValue('');
                     this.refreshOptions(false);

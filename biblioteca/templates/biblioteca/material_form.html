@@ -948,19 +948,20 @@
             }
         });
 
-        const selectors = [
-            '#id_editoriales_id_editorial',
-            '#id_autores_id_autor',
-            '#id_carreras',
-            '#id_generos',
-            '#id_tipo_trabajo',
-            '#id_tipo_material'
-        ];
+        const selectors = {
+            '#id_editoriales_id_editorial': 'editorial',
+            '#id_autores_id_autor': 'autor',
+            '#id_carreras': 'carrera',
+            '#id_generos': 'genero',
+            '#id_tipo_trabajo': 'tipodocumento',
+            '#id_tipo_material': 'tipodocumento'
+        };
         
-        selectors.forEach(selector => {
+        Object.keys(selectors).forEach(selector => {
             const el = document.querySelector(selector);
             if (el) {
                 const isMultiple = el.hasAttribute('multiple');
+                const modelType = selectors[selector];
                 
                 // Specific placeholders requested by the user
                 let placeholderText = isMultiple ? "Seleccione una o más opciones..." : "Seleccione una opción...";
@@ -972,12 +973,29 @@
                 }
 
                 const ts = new TomSelect(el, {
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: 'text',
                     plugins: isMultiple ? ['remove_button'] : [],
                     create: false,
                     placeholder: placeholderText,
                     allowEmptyOption: false,
                     maxOptions: 100,
                     dropdownParent: 'body', // Float over the modal to avoid clipping & scrollbars
+                    preload: 'focus', // Load initial options on focus
+                    shouldLoad: function(query) {
+                        return true;
+                    },
+                    load: function(query, callback) {
+                        var url = "{% url 'buscar-opciones' %}?model=" + modelType + '&q=' + encodeURIComponent(query);
+                        fetch(url)
+                            .then(response => response.json())
+                            .then(json => {
+                                callback(json);
+                            }).catch(() => {
+                                callback();
+                            });
+                    },
                     onItemAdd: function() {
                         this.setTextboxValue('');
                         this.refreshOptions(false);

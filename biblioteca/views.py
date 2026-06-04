@@ -95,7 +95,7 @@ class MaterialCreateView(LoginRequiredMixin, CreateView):
                 Q(autores_id_autor__apellido__icontains=q) |
                 Q(isbn__icontains=q)
             )
-        context['materiales'] = queryset
+        context['materiales'] = queryset[:10]
         return context
 
 class MaterialUpdateView(LoginRequiredMixin, UpdateView):
@@ -134,7 +134,7 @@ class MaterialUpdateView(LoginRequiredMixin, UpdateView):
                 Q(autores_id_autor__apellido__icontains=q) |
                 Q(isbn__icontains=q)
             )
-        context['materiales'] = queryset
+        context['materiales'] = queryset[:10]
         return context
 
 class MaterialDeleteView(LoginRequiredMixin, DeleteView):
@@ -253,6 +253,7 @@ class PrestamoListView(LoginRequiredMixin, ListView):
     model = Prestamo
     template_name = 'biblioteca/prestamo_list.html'
     context_object_name = 'prestamos'
+    paginate_by = 15
 
     def get_queryset(self):
         Prestamo.actualizar_vencidos()
@@ -297,15 +298,7 @@ class PrestamoCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        materiales_data = {}
-        materiales = Material.objects.all()
-        for m in materiales:
-            materiales_data[m.id_material] = {
-                'numeros': m.numeros_entrada_disponibles(),
-                'titulo': m.titulo,
-                'disponible': m.cantidad_disponible
-            }
-        context['materiales_json'] = materiales_data
+        context['materiales_json'] = {}
         return context
 
 class PrestamoUpdateView(LoginRequiredMixin, UpdateView):
@@ -323,19 +316,7 @@ class PrestamoUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        materiales_data = {}
-        materiales = Material.objects.all()
-        prestamo = self.get_object()
-        for m in materiales:
-            disp = m.cantidad_disponible
-            if prestamo.MATERIALES_id_material == m:
-                disp += prestamo.cantidad
-            materiales_data[m.id_material] = {
-                'numeros': m.numeros_entrada_disponibles(exclude_prestamo_id=prestamo.pk),
-                'titulo': m.titulo,
-                'disponible': disp
-            }
-        context['materiales_json'] = materiales_data
+        context['materiales_json'] = {}
         return context
 
 
@@ -389,6 +370,7 @@ class AlumnoListView(LoginRequiredMixin, ListView):
     model = Alumno
     template_name = 'biblioteca/alumno_list.html'
     context_object_name = 'alumnos'
+    paginate_by = 15
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -500,11 +482,30 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
 class BaseCatalogListView(LoginRequiredMixin, ListView):
     template_name = 'biblioteca/generic_list.html'
     col_class = 'col-lg-7 col-md-9'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            from django.db.models import Q, CharField, TextField
+            if self.model.__name__ == 'Autor':
+                queryset = queryset.filter(Q(nombre__icontains=q) | Q(apellido__icontains=q))
+            elif self.model.__name__ == 'Editorial':
+                queryset = queryset.filter(Q(nombre__icontains=q) | Q(direccion__icontains=q) | Q(telefono__icontains=q))
+            else:
+                query = Q()
+                for field in self.model._meta.fields:
+                    if isinstance(field, (CharField, TextField)):
+                        query |= Q(**{f"{field.name}__icontains": q})
+                queryset = queryset.filter(query)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         rows = []
-        for obj in self.get_queryset():
+        # Use paginated object_list instead of self.get_queryset()
+        for obj in context.get('object_list', []):
             row_data = {
                 'pk': obj.pk,
                 'cells': []
@@ -536,6 +537,7 @@ class BaseCatalogListView(LoginRequiredMixin, ListView):
         context['delete_url_name'] = delete_url_name
         context['col_class'] = self.col_class
         return context
+
 
 class BaseCatalogCreateView(LoginRequiredMixin, CreateView):
     template_name = 'biblioteca/generic_form.html'
@@ -799,6 +801,7 @@ class DevolucionListView(LoginRequiredMixin, ListView):
     model = Devolucion
     template_name = 'biblioteca/devolucion_list.html'
     context_object_name = 'devoluciones'
+    paginate_by = 15
 
     def get_queryset(self):
         queryset = Devolucion.objects.all().select_related(
@@ -843,18 +846,8 @@ class DevolucionCreateView(LoginRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Registrar Devolución'
         context['subtitle'] = 'Registra la devolución de un préstamo físico y calcula la multa si aplica'
-        prestamos = Prestamo.objects.filter(estado__in=['ACTIVO', 'VENCIDO']).select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material')
-        context['prestamos_disponibles'] = prestamos
-        
-        import json
-        prestamos_data = {}
-        for p in prestamos:
-            prestamos_data[p.id_prestamo] = {
-                'vencimiento': p.fecha_vencimiento.strftime('%Y-%m-%d'),
-                'alumno': f"{p.ALUMNOS_id_alumno.nombre} {p.ALUMNOS_id_alumno.apellido}",
-                'material': p.MATERIALES_id_material.titulo
-            }
-        context['prestamos_json'] = json.dumps(prestamos_data)
+        context['prestamos_disponibles'] = Prestamo.objects.none()
+        context['prestamos_json'] = "{}"
         context['hoy'] = timezone.localdate().strftime('%Y-%m-%d')
         
         # Add dynamic configuration for Javascript
@@ -1118,4 +1111,118 @@ class AuditoriaListView(LoginRequiredMixin, ListView):
         context['subtitle'] = 'Registro histórico de acciones, modificaciones y eventos de seguridad.'
         context['acciones_disponibles'] = RegistroAuditoria.ACCIONES
         return context
+
+
+from django.http import JsonResponse
+
+class BuscarOpcionesView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        model_name = request.GET.get('model')
+        q = request.GET.get('q', '').strip()
+        
+        results = []
+        if model_name == 'autor':
+            queryset = Autor.objects.all()
+            if q:
+                queryset = queryset.filter(Q(nombre__icontains=q) | Q(apellido__icontains=q))
+            results = [{'value': obj.pk, 'text': f"{obj.nombre} {obj.apellido}".strip()} for obj in queryset[:100]]
+        elif model_name == 'editorial':
+            queryset = Editorial.objects.all()
+            if q:
+                queryset = queryset.filter(nombre__icontains=q)
+            results = [{'value': obj.pk, 'text': obj.nombre} for obj in queryset[:100]]
+        elif model_name == 'carrera':
+            queryset = Carrera.objects.all()
+            if q:
+                queryset = queryset.filter(nombre__icontains=q)
+            results = [{'value': obj.pk, 'text': obj.nombre} for obj in queryset[:100]]
+        elif model_name == 'genero':
+            queryset = Genero.objects.all()
+            if q:
+                queryset = queryset.filter(nombre__icontains=q)
+            results = [{'value': obj.pk, 'text': obj.nombre} for obj in queryset[:100]]
+        elif model_name == 'tipodocumento':
+            queryset = TipoDocumento.objects.all()
+            if q:
+                queryset = queryset.filter(descripcion__icontains=q)
+            results = [{'value': obj.pk, 'text': obj.descripcion} for obj in queryset[:100]]
+        elif model_name == 'alumno':
+            queryset = Alumno.objects.filter(estado=True)
+            if q:
+                queryset = queryset.filter(Q(nombre__icontains=q) | Q(apellido__icontains=q) | Q(matricula__icontains=q))
+            for obj in queryset.select_related('carreras_id_carrera')[:100]:
+                cedula = obj.numero_documento or obj.matricula or ""
+                results.append({
+                    'value': obj.pk,
+                    'text': f"{obj.nombre} {obj.apellido} (Cédula: {cedula}) - Carrera: {obj.carreras_id_carrera.nombre}"
+                })
+        elif model_name == 'material':
+            queryset = Material.objects.filter(cantidad_disponible__gt=0)
+            if q:
+                queryset = queryset.filter(Q(titulo__icontains=q) | Q(isbn__icontains=q) | Q(numero_entrada__icontains=q))
+            for obj in queryset.prefetch_related('autores_id_autor')[:100]:
+                autores = obj.autores_id_autor.all()
+                autor_desc = ", ".join([a.descripcion for a in autores]) if autores.exists() else "Sin autor"
+                isbn_str = f" | ISBN: {obj.isbn}" if obj.isbn else ""
+                entrada_str = f" | N° Entrada: {obj.numero_entrada}" if obj.numero_entrada else ""
+                results.append({
+                    'value': obj.pk,
+                    'text': f"{obj.titulo} (Autor: {autor_desc}{isbn_str}{entrada_str}) - Disp: {obj.cantidad_disponible}"
+                })
+        elif model_name == 'prestamo':
+            queryset = Prestamo.objects.filter(estado__in=['ACTIVO', 'VENCIDO']).select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material')
+            if q:
+                queryset = queryset.filter(
+                    Q(id_prestamo__icontains=q) |
+                    Q(ALUMNOS_id_alumno__nombre__icontains=q) |
+                    Q(ALUMNOS_id_alumno__apellido__icontains=q) |
+                    Q(ALUMNOS_id_alumno__matricula__icontains=q) |
+                    Q(MATERIALES_id_material__titulo__icontains=q) |
+                    Q(numero_entrada__icontains=q)
+                )
+            for obj in queryset[:100]:
+                cedula = obj.ALUMNOS_id_alumno.numero_documento or obj.ALUMNOS_id_alumno.matricula or ""
+                entrada_str = f" [N° Entrada: {obj.numero_entrada}]" if obj.numero_entrada else ""
+                results.append({
+                    'value': obj.pk,
+                    'text': f"Préstamo #{obj.id_prestamo} - Alumno: {obj.ALUMNOS_id_alumno.nombre} {obj.ALUMNOS_id_alumno.apellido} (Cédula: {cedula}) — Material: {obj.MATERIALES_id_material.titulo}{entrada_str} (Vence: {obj.fecha_vencimiento.strftime('%d/%m/%Y')})"
+                })
+        elif model_name == 'material_detalle':
+            pk = request.GET.get('pk')
+            if pk:
+                try:
+                    m = Material.objects.get(pk=pk)
+                    exclude_prestamo_id = request.GET.get('exclude_prestamo_id')
+                    disp = m.cantidad_disponible
+                    if exclude_prestamo_id:
+                        try:
+                            p = Prestamo.objects.get(pk=exclude_prestamo_id)
+                            if p.MATERIALES_id_material == m:
+                                disp += p.cantidad
+                        except Prestamo.DoesNotExist:
+                            pass
+                    return JsonResponse({
+                        'numeros': m.numeros_entrada_disponibles(exclude_prestamo_id=exclude_prestamo_id),
+                        'titulo': m.titulo,
+                        'disponible': disp
+                    })
+                except Material.DoesNotExist:
+                    pass
+            return JsonResponse({}, status=404)
+        elif model_name == 'prestamo_detalle':
+            pk = request.GET.get('pk')
+            if pk:
+                try:
+                    p = Prestamo.objects.select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material').get(pk=pk)
+                    return JsonResponse({
+                        'vencimiento': p.fecha_vencimiento.strftime('%Y-%m-%d'),
+                        'alumno': f"{p.ALUMNOS_id_alumno.nombre} {p.ALUMNOS_id_alumno.apellido}",
+                        'material': p.MATERIALES_id_material.titulo
+                    })
+                except Prestamo.DoesNotExist:
+                    pass
+            return JsonResponse({}, status=404)
+            
+        return JsonResponse(results, safe=False)
+
 

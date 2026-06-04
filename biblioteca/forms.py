@@ -24,6 +24,33 @@ class BootstrapModelForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
 
+    def _optimize_queryset(self, field_name, model_class):
+        if field_name not in self.fields:
+            return
+        
+        if self.is_bound:
+            if isinstance(self.fields[field_name], forms.ModelMultipleChoiceField):
+                val_list = self.data.getlist(field_name)
+            else:
+                val_list = [self.data.get(field_name)]
+            val_list = [v for v in val_list if v]
+            if val_list:
+                self.fields[field_name].queryset = model_class.objects.filter(pk__in=val_list)
+            else:
+                self.fields[field_name].queryset = model_class.objects.none()
+        else:
+            if self.instance and self.instance.pk:
+                if isinstance(self.fields[field_name], forms.ModelMultipleChoiceField):
+                    self.fields[field_name].queryset = getattr(self.instance, field_name).all()
+                else:
+                    val = getattr(self.instance, field_name)
+                    if val:
+                        self.fields[field_name].queryset = model_class.objects.filter(pk=val.pk)
+                    else:
+                        self.fields[field_name].queryset = model_class.objects.none()
+            else:
+                self.fields[field_name].queryset = model_class.objects.none()
+
 
 class LibroForm(BootstrapModelForm):
     estado_material = forms.ChoiceField(
@@ -52,6 +79,11 @@ class LibroForm(BootstrapModelForm):
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+        
+        self._optimize_queryset('autores_id_autor', Autor)
+        self._optimize_queryset('editoriales_id_editorial', Editorial)
+        self._optimize_queryset('carreras', Carrera)
+        self._optimize_queryset('generos', Genero)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -171,6 +203,10 @@ class TrabajoInvestigacionForm(BootstrapModelForm):
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+
+        self._optimize_queryset('autores_id_autor', Autor)
+        self._optimize_queryset('carreras', Carrera)
+        self._optimize_queryset('tipo_trabajo', TipoDocumento)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -292,6 +328,8 @@ class OtrosMaterialesForm(BootstrapModelForm):
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+
+        self._optimize_queryset('tipo_material', TipoDocumento)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -424,6 +462,10 @@ class AlumnoForm(BootstrapModelForm):
             'estado': 'Estado Activo'
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._optimize_queryset('carreras_id_carrera', Carrera)
+
     def clean(self):
         cleaned_data = super().clean()
         num_doc = cleaned_data.get('numero_documento')
@@ -480,64 +522,48 @@ class PrestamoForm(BootstrapModelForm):
         fields = ['ALUMNOS_id_alumno', 'MATERIALES_id_material', 'cantidad', 'numero_entrada']
 
     def __init__(self, *args, **kwargs):
-        from django.db.models import Q
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(
-                Q(estado=True) | Q(pk=self.instance.ALUMNOS_id_alumno.pk)
-            )
-        else:
-            self.fields['ALUMNOS_id_alumno'].queryset = Alumno.objects.filter(estado=True)
         
-        # Populate choices dynamically from POST data if bound
+        # Optimize querysets
+        self._optimize_queryset('ALUMNOS_id_alumno', Alumno)
+        self._optimize_queryset('MATERIALES_id_material', Material)
+        
+        # Set required fields
+        if 'cantidad' in self.fields:
+            self.fields['cantidad'].required = True
+            
+        material_id = None
         if self.is_bound:
             material_id = self.data.get('MATERIALES_id_material')
-            if material_id:
-                try:
-                    m = Material.objects.get(pk=material_id)
-                    self.fields['numero_entrada'].choices = [(n, n) for n in m.lista_numeros_entrada]
-                except Material.DoesNotExist:
-                    pass
-                    
-        if self.is_bound:
-            self.fields['MATERIALES_id_material'].queryset = Material.objects.all()
-            if self.instance and self.instance.pk:
-                m = self.instance.MATERIALES_id_material
-                disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
-                current_ne = self.instance.numero_entrada
-                current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+        elif self.instance and self.instance.pk:
+            material_id = self.instance.MATERIALES_id_material_id
+            
+        if material_id:
+            try:
+                m = Material.objects.get(pk=material_id)
+                disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk if self.instance and self.instance.pk else None)
                 
-                if str(m.pk) == str(self.data.get('MATERIALES_id_material')):
-                    choices = []
-                    for c_ne in current_nes:
-                        choices.append((c_ne, c_ne))
-                    for n in disponibles:
-                        if n not in current_nes:
-                            choices.append((n, n))
-                    self.fields['numero_entrada'].choices = choices
-                self.initial['numero_entrada'] = current_nes
-        else:
-            if self.instance and self.instance.pk:
-                self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(
-                    Q(cantidad_disponible__gt=0) | Q(pk=self.instance.MATERIALES_id_material.pk)
-                )
-                m = self.instance.MATERIALES_id_material
-                disponibles = m.numeros_entrada_disponibles(exclude_prestamo_id=self.instance.pk)
-                current_ne = self.instance.numero_entrada
-                current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
+                current_nes = []
+                if self.instance and self.instance.pk and self.instance.MATERIALES_id_material_id == m.pk:
+                    current_ne = self.instance.numero_entrada
+                    current_nes = [x.strip() for x in current_ne.split(',') if x.strip()] if current_ne else []
                 
                 choices = []
+                # Include currently selected ones
                 for c_ne in current_nes:
                     choices.append((c_ne, c_ne))
+                # Add available ones
                 for n in disponibles:
                     if n not in current_nes:
                         choices.append((n, n))
-                
+                        
                 self.fields['numero_entrada'].choices = choices
-                self.initial['numero_entrada'] = current_nes
-            else:
-                self.fields['MATERIALES_id_material'].queryset = Material.objects.filter(cantidad_disponible__gt=0)
+                if not self.is_bound:
+                    self.initial['numero_entrada'] = current_nes
+            except Material.DoesNotExist:
                 self.fields['numero_entrada'].choices = []
+        else:
+            self.fields['numero_entrada'].choices = []
 
     def clean(self):
         cleaned_data = super().clean()
@@ -721,9 +747,7 @@ class DevolucionForm(BootstrapModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['prestamos_id_prestamo'].queryset = Prestamo.objects.filter(
-            estado__in=['ACTIVO', 'VENCIDO']
-        ).select_related('ALUMNOS_id_alumno', 'MATERIALES_id_material')
+        self._optimize_queryset('prestamos_id_prestamo', Prestamo)
 
 
 class ConfiguracionGeneralForm(BootstrapModelForm):

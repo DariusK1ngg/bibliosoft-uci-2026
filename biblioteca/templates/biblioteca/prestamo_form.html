@@ -176,24 +176,34 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        let materialesData = JSON.parse(document.getElementById('materiales-data').textContent);
-        if (typeof materialesData === 'string') {
-            materialesData = JSON.parse(materialesData);
-        }
         const editingLoanId = "{% if object %}{{ object.pk }}{% endif %}";
         const currentLoanNe = "{% if object %}{{ object.numero_entrada }}{% endif %}";
         
         let tsMaterial; // Declare in outer scope to prevent TDZ issues
         let tsAlumno;
         let tsNumeroEntrada;
-
+ 
         // Initialize Tom Select for Alumno
         try {
             tsAlumno = new TomSelect("#id_ALUMNOS_id_alumno", {
+                valueField: 'value',
+                labelField: 'text',
+                searchField: 'text',
                 create: false,
                 placeholder: "Busque y seleccione un alumno...",
                 allowEmptyOption: false,
                 maxOptions: 100,
+                preload: 'focus',
+                shouldLoad: function(query) {
+                    return true;
+                },
+                load: function(query, callback) {
+                    var url = "{% url 'buscar-opciones' %}?model=alumno&q=" + encodeURIComponent(query);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(json => callback(json))
+                        .catch(() => callback());
+                },
                 onItemAdd: function() {
                     this.setTextboxValue('');
                     this.refreshOptions(false);
@@ -202,7 +212,7 @@
         } catch (e) {
             console.error("Error initializing Alumno TomSelect:", e);
         }
-
+ 
         // Initialize Tom Select for Numero Entrada (Multiple Selection)
         try {
             tsNumeroEntrada = new TomSelect("#id_numero_entrada", {
@@ -218,7 +228,7 @@
         } catch (e) {
             console.error("Error initializing Numero Entrada TomSelect:", e);
         }
-
+ 
         // Elements
         const selectMaterial = document.getElementById('id_MATERIALES_id_material');
         const inputCantidad = document.getElementById('id_cantidad');
@@ -226,14 +236,14 @@
         const seccionNumeroEntrada = document.getElementById('seccion_numero_entrada');
         const materialStockLabel = document.getElementById('material_stock_label');
         const materialStockCount = document.getElementById('material_stock_count');
-
+ 
         // Prevent mouse wheel scrolling from changing input quantity value
         if (inputCantidad) {
             inputCantidad.addEventListener('wheel', function(e) {
                 e.preventDefault();
             }, { passive: false });
         }
-
+ 
         // Function to update dynamic fields when material changes
         function handleMaterialChange(materialId, isInitial = false) {
             console.log("handleMaterialChange called with ID:", materialId, "Initial:", isInitial);
@@ -247,91 +257,83 @@
                 }
                 return;
             }
-
-            let selectedOptionText = "";
-            if (typeof tsMaterial !== 'undefined' && tsMaterial && tsMaterial.options && tsMaterial.options[materialId]) {
-                selectedOptionText = tsMaterial.options[materialId].text || "";
+ 
+            var url = "{% url 'buscar-opciones' %}?model=material_detalle&pk=" + materialId;
+            if (editingLoanId) {
+                url += "&exclude_prestamo_id=" + editingLoanId;
             }
             
-            let material = materialesData[materialId] || materialesData[String(materialId)] || materialesData[Number(materialId)];
-            
-            if (!material) {
-                material = { titulo: "", numeros: [], disponible: 0 };
-            }
-
-            // Extract stock and entry numbers from text if missing from JSON
-            if (selectedOptionText) {
-                if (material.disponible === undefined || material.disponible === 0) {
-                    const matchStock = selectedOptionText.match(/Disp:\s*(\d+)/i) || selectedOptionText.match(/Disponible:\s*(\d+)/i);
-                    if (matchStock) material.disponible = parseInt(matchStock[1], 10);
-                }
-                if (!material.numeros || material.numeros.length === 0) {
-                    const matchNums = selectedOptionText.match(/N[°o]\s*Entrada:\s*([\d\s*,\s*-]+)/i) || selectedOptionText.match(/N[°o]\.\s*Entrada:\s*([\d\s*,\s*-]+)/i);
-                    if (matchNums) {
-                        const parts = matchNums[1].split(/[,/;]/).map(x => x.trim()).filter(x => x);
-                        material.numeros = [];
-                        parts.forEach(part => {
-                            const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
-                            if (rangeMatch) {
-                                for (let i = parseInt(rangeMatch[1]); i <= parseInt(rangeMatch[2]); i++) material.numeros.push(String(i));
-                            } else {
-                                material.numeros.push(part);
+            fetch(url)
+                .then(response => response.json())
+                .then(material => {
+                    materialStockCount.textContent = material.disponible !== undefined ? material.disponible : '0';
+                    materialStockLabel.style.display = 'block';
+ 
+                    if (inputCantidad) inputCantidad.max = material.disponible || 1;
+ 
+                    const numeros = material.numeros;
+                    if (numeros && numeros.length > 0) {
+                        const targetValue = isInitial && currentLoanNe ? currentLoanNe : (selectNumeroEntrada.value || "");
+                        const targetValues = targetValue ? targetValue.split(',').map(x => x.trim()).filter(x => x) : [];
+                        
+                        if (tsNumeroEntrada) {
+                            tsNumeroEntrada.clear();
+                            tsNumeroEntrada.clearOptions();
+                            
+                            if (isInitial && currentLoanNe) {
+                                const currentNes = currentLoanNe.split(',').map(x => x.trim()).filter(x => x);
+                                currentNes.forEach(num => tsNumeroEntrada.addOption({value: num, text: num}));
+                                tsNumeroEntrada.setValue(currentNes);
                             }
-                        });
-                    }
-                }
-            }
-            
-            materialStockCount.textContent = material.disponible !== undefined ? material.disponible : '0';
-            materialStockLabel.style.display = 'block';
-
-            if (inputCantidad) inputCantidad.max = material.disponible || 1;
-
-            const numeros = material.numeros;
-            if (numeros && numeros.length > 0) {
-                const targetValue = isInitial && currentLoanNe ? currentLoanNe : (selectNumeroEntrada.value || "");
-                const targetValues = targetValue ? targetValue.split(',').map(x => x.trim()).filter(x => x) : [];
-                
-                if (tsNumeroEntrada) {
-                    tsNumeroEntrada.clear();
-                    tsNumeroEntrada.clearOptions();
-                    
-                    if (isInitial && currentLoanNe) {
-                        const currentNes = currentLoanNe.split(',').map(x => x.trim()).filter(x => x);
-                        currentNes.forEach(num => tsNumeroEntrada.addOption({value: num, text: num}));
-                        tsNumeroEntrada.setValue(currentNes);
-                    }
-                    
-                    numeros.forEach(num => {
-                        if (!tsNumeroEntrada.options[num]) {
-                            tsNumeroEntrada.addOption({value: num, text: num});
+                            
+                            numeros.forEach(num => {
+                                if (!tsNumeroEntrada.options[num]) {
+                                    tsNumeroEntrada.addOption({value: num, text: num});
+                                }
+                            });
+                            
+                            if (!isInitial && targetValues.length > 0) {
+                                tsNumeroEntrada.setValue(targetValues);
+                            }
                         }
-                    });
-                    
-                    if (!isInitial && targetValues.length > 0) {
-                        tsNumeroEntrada.setValue(targetValues);
+                        
+                        selectNumeroEntrada.setAttribute('required', 'required');
+                        seccionNumeroEntrada.style.display = 'block';
+                    } else {
+                        seccionNumeroEntrada.style.display = 'none';
+                        if (tsNumeroEntrada) {
+                            tsNumeroEntrada.clear();
+                            tsNumeroEntrada.clearOptions();
+                        }
+                        selectNumeroEntrada.removeAttribute('required');
                     }
-                }
-                
-                selectNumeroEntrada.setAttribute('required', 'required');
-                seccionNumeroEntrada.style.display = 'block';
-            } else {
-                seccionNumeroEntrada.style.display = 'none';
-                if (tsNumeroEntrada) {
-                    tsNumeroEntrada.clear();
-                    tsNumeroEntrada.clearOptions();
-                }
-                selectNumeroEntrada.removeAttribute('required');
-            }
+                })
+                .catch(err => {
+                    console.error("Error loading material details:", err);
+                });
         }
-
+ 
         // Initialize Tom Select for Material
         try {
             tsMaterial = new TomSelect("#id_MATERIALES_id_material", {
+                valueField: 'value',
+                labelField: 'text',
+                searchField: 'text',
                 create: false,
                 placeholder: "Busque y seleccione un material...",
                 allowEmptyOption: false,
                 maxOptions: 100,
+                preload: 'focus',
+                shouldLoad: function(query) {
+                    return true;
+                },
+                load: function(query, callback) {
+                    var url = "{% url 'buscar-opciones' %}?model=material&q=" + encodeURIComponent(query);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(json => callback(json))
+                        .catch(() => callback());
+                },
                 onItemAdd: function() {
                     this.setTextboxValue('');
                     this.refreshOptions(false);
@@ -344,7 +346,7 @@
         } catch (e) {
             console.error("Error initializing Material TomSelect:", e);
         }
-
+ 
         // Run on initial load in case editing or pre-filled
         handleMaterialChange(selectMaterial ? selectMaterial.value : '', true);
     });

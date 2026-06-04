@@ -15,13 +15,14 @@ from .views import (
     CarreraListView, CarreraCreateView, CarreraUpdateView, CarreraDeleteView,
     DevolucionListView, DevolucionCreateView,
     ReportesView, ReportePrintView,
-    ConfiguracionGeneralUpdateView, AuditoriaListView
+    ConfiguracionGeneralUpdateView, AuditoriaListView, BuscarOpcionesView
 )
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='dashboard'),
     path('configuracion/', ConfiguracionGeneralUpdateView.as_view(), name='configuracion-general'),
     path('auditoria/', AuditoriaListView.as_view(), name='auditoria-list'),
+    path('buscar-opciones/', BuscarOpcionesView.as_view(), name='buscar-opciones'),
     
     # Materiales
     path('materiales/', MaterialListView.as_view(), name='material-list'),
