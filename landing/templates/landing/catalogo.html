@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
     <title>Catálogo Público - Bibliosoft</title>
     <link rel="icon" type="image/png" href="{% static 'images/logo_uci.png' %}">
     <meta name="description" content="Explora el catálogo completo de la Biblioteca Dr. Jesús René Haurón Acuña — Universidad Católica Campus Itapúa.">
@@ -108,6 +109,17 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        @media (max-width: 991.98px) {
+            .filter-card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 1.5rem !important;
+                border-radius: 0 !important;
+            }
+            .offcanvas-lg {
+                max-width: 320px !important;
+            }
         }
         .form-label {
             font-size: 0.8rem;
@@ -419,125 +431,136 @@
 <!-- ── Content ── -->
 <main class="flex-grow-1 py-5">
     <div class="container">
-        <div class="row g-4">
-            
-            <!-- Sidebar de Filtros -->
-            <div class="col-lg-3">
-                <div class="filter-card">
-                    <h5><i class="fas fa-sliders-h"></i> Filtrar Acervo</h5>
-                    <form method="get" action="{% url 'catalogo_publico' %}" id="filterForm">
-                        <input type="hidden" name="page" id="currentPageInput" value="{{ materiales.number }}">
-                        
-                        <!-- Buscar por texto -->
-                        <div class="mb-3">
-                            <label class="form-label" for="searchQuery">Búsqueda rápida</label>
-                            <div class="input-group">
-                                <input type="text" name="q" id="searchQuery" class="form-control" placeholder="Título, autor, ISBN..." value="{{ query }}">
-                                {% if query %}
-                                    <a href="{% url 'catalogo_publico' %}" class="btn btn-outline-secondary d-flex align-items-center"><i class="fas fa-times"></i></a>
-                                {% endif %}
+        <form method="get" action="{% url 'catalogo_publico' %}" id="filterForm">
+            <input type="hidden" name="page" id="currentPageInput" value="{{ materiales.number }}">
+            <div class="row g-4">
+                
+                <!-- Sidebar de Filtros -->
+                <div class="col-lg-3">
+                    <div class="offcanvas-lg offcanvas-start" tabindex="-1" id="sidebarFiltros" aria-labelledby="sidebarFiltrosLabel">
+                        <div class="offcanvas-header bg-light border-bottom d-lg-none">
+                            <h5 class="offcanvas-title fw-bold text-primary mb-0" id="sidebarFiltrosLabel">
+                                <i class="fas fa-sliders-h"></i> Filtrar Acervo
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarFiltros" aria-label="Close"></button>
+                        </div>
+                        <div class="offcanvas-body p-0 d-block">
+                            <div class="filter-card w-100">
+                                <h5 class="d-none d-lg-flex"><i class="fas fa-sliders-h"></i> Filtrar Acervo</h5>
+                                
+                                <!-- Tipo de Registro -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterTipoRegistro">Tipo de Registro</label>
+                                    <select name="tipo_registro" id="filterTipoRegistro" class="form-select">
+                                        <option value="">Seleccione una opción...</option>
+                                        <option value="LIBRO" {% if selected_tipo_registro == 'LIBRO' %}selected{% endif %}>Libro</option>
+                                        <option value="TRABAJO_INVESTIGACION" {% if selected_tipo_registro == 'TRABAJO_INVESTIGACION' %}selected{% endif %}>Tesis / Trabajo de Investigación</option>
+                                        <option value="OTROS" {% if selected_tipo_registro == 'OTROS' %}selected{% endif %}>Otros Materiales</option>
+                                    </select>
+                                </div>
+
+                                <!-- Géneros -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterGenero">Género</label>
+                                    <select name="genero" id="filterGenero" class="form-select">
+                                        <option value="">Seleccione una opción...</option>
+                                        {% for gen in generos %}
+                                            <option value="{{ gen.id_genero }}" {% if selected_genero == gen.id_genero %}selected{% endif %}>{{ gen.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Autores -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterAutor">Autor</label>
+                                    <select name="autor" id="filterAutor" class="form-select">
+                                        <option value="">Seleccione una opción...</option>
+                                        {% for aut in autores %}
+                                            <option value="{{ aut.id_autor }}" {% if selected_autor == aut.id_autor %}selected{% endif %}>{{ aut.nombre }} {{ aut.apellido }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Facultades -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterFacultad">Facultad</label>
+                                    <select name="filterFacultad" id="filterFacultad" class="form-select">
+                                        <option value="">Todas las facultades</option>
+                                        {% for fac in facultades %}
+                                            <option value="{{ fac.id_facultad }}" {% if selected_facultad == fac.id_facultad %}selected{% endif %}>{{ fac.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Carreras -->
+                                <div class="mb-3" id="carrera-filter-container">
+                                    <label class="form-label" for="filterCarrera">Carrera</label>
+                                    <select name="carrera" id="filterCarrera" class="form-select">
+                                        <option value="">Todas las carreras</option>
+                                        {% for car in carreras %}
+                                            <option value="{{ car.id_carrera }}" {% if selected_carrera == car.id_carrera %}selected{% endif %}>{{ car.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Editoriales -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterEditorial">Editorial</label>
+                                    <select name="editorial" id="filterEditorial" class="form-select">
+                                        <option value="">Seleccione una opción...</option>
+                                        {% for edit in editoriales %}
+                                            <option value="{{ edit.id_editorial }}" {% if selected_editorial == edit.id_editorial %}selected{% endif %}>{{ edit.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Ordenamiento -->
+                                <div class="mb-3">
+                                    <label class="form-label" for="filterOrden">Ordenar por</label>
+                                    <select name="orden" id="filterOrden" class="form-select">
+                                        <option value="">Por defecto</option>
+                                        <option value="reciente" {% if selected_orden == 'reciente' %}selected{% endif %}>Por año más reciente</option>
+                                        <option value="antiguo" {% if selected_orden == 'antiguo' %}selected{% endif %}>Por año más antiguo</option>
+                                        <option value="agregado" {% if selected_orden == 'agregado' %}selected{% endif %}>Agregado recientemente</option>
+                                    </select>
+                                </div>
+
+                                <!-- Disponibilidad -->
+                                <div class="mb-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="disponible" value="1" id="filterDisponible" {% if solo_disponibles %}checked{% endif %}>
+                                        <label class="form-check-label fw-medium" for="filterDisponible" style="font-size: 0.85rem;">Solo disponibles</label>
+                                    </div>
+                                </div>
+
+                                <!-- Resetear -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-sm rounded-pill py-2 fw-semibold" style="background-color: var(--primary); border: none;">Aplicar Filtros</button>
+                                    <button type="button" id="btnReset" class="btn btn-outline-secondary btn-sm rounded-pill py-2 fw-semibold">Limpiar todo</button>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Tipo de Registro -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterTipoRegistro">Tipo de Registro</label>
-                            <select name="tipo_registro" id="filterTipoRegistro" class="form-select">
-                                <option value="">Seleccione una opción...</option>
-                                <option value="LIBRO" {% if selected_tipo_registro == 'LIBRO' %}selected{% endif %}>Libro</option>
-                                <option value="TRABAJO_INVESTIGACION" {% if selected_tipo_registro == 'TRABAJO_INVESTIGACION' %}selected{% endif %}>Tesis / Trabajo de Investigación</option>
-                                <option value="OTROS" {% if selected_tipo_registro == 'OTROS' %}selected{% endif %}>Otros Materiales</option>
-                            </select>
-                        </div>
-
-                        <!-- Géneros -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterGenero">Género</label>
-                            <select name="genero" id="filterGenero" class="form-select">
-                                <option value="">Seleccione una opción...</option>
-                                {% for gen in generos %}
-                                    <option value="{{ gen.id_genero }}" {% if selected_genero == gen.id_genero %}selected{% endif %}>{{ gen.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Autores -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterAutor">Autor</label>
-                            <select name="autor" id="filterAutor" class="form-select">
-                                <option value="">Seleccione una opción...</option>
-                                {% for aut in autores %}
-                                    <option value="{{ aut.id_autor }}" {% if selected_autor == aut.id_autor %}selected{% endif %}>{{ aut.nombre }} {{ aut.apellido }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Facultades -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterFacultad">Facultad</label>
-                            <select name="facultad" id="filterFacultad" class="form-select">
-                                <option value="">Todas las facultades</option>
-                                {% for fac in facultades %}
-                                    <option value="{{ fac.id_facultad }}" {% if selected_facultad == fac.id_facultad %}selected{% endif %}>{{ fac.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Carreras -->
-                        <div class="mb-3" id="carrera-filter-container">
-                            <label class="form-label" for="filterCarrera">Carrera</label>
-                            <select name="carrera" id="filterCarrera" class="form-select">
-                                <option value="">Todas las carreras</option>
-                                {% for car in carreras %}
-                                    <option value="{{ car.id_carrera }}" {% if selected_carrera == car.id_carrera %}selected{% endif %}>{{ car.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Editoriales -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterEditorial">Editorial</label>
-                            <select name="editorial" id="filterEditorial" class="form-select">
-                                <option value="">Seleccione una opción...</option>
-                                {% for edit in editoriales %}
-                                    <option value="{{ edit.id_editorial }}" {% if selected_editorial == edit.id_editorial %}selected{% endif %}>{{ edit.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Ordenamiento -->
-                        <div class="mb-3">
-                            <label class="form-label" for="filterOrden">Ordenar por</label>
-                            <select name="orden" id="filterOrden" class="form-select">
-                                <option value="">Por defecto</option>
-                                <option value="reciente" {% if selected_orden == 'reciente' %}selected{% endif %}>Por año más reciente</option>
-                                <option value="antiguo" {% if selected_orden == 'antiguo' %}selected{% endif %}>Por año más antiguo</option>
-                                <option value="agregado" {% if selected_orden == 'agregado' %}selected{% endif %}>Agregado recientemente</option>
-                            </select>
-                        </div>
-
-                        <!-- Disponibilidad -->
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="disponible" value="1" id="filterDisponible" {% if solo_disponibles %}checked{% endif %}>
-                                <label class="form-check-label fw-medium" for="filterDisponible" style="font-size: 0.85rem;">Solo disponibles</label>
-                            </div>
-                        </div>
-
-                        <!-- Resetear -->
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm rounded-pill py-2 fw-semibold" style="background-color: var(--primary); border: none;">Aplicar Filtros</button>
-                            <button type="button" id="btnReset" class="btn btn-outline-secondary btn-sm rounded-pill py-2 fw-semibold">Limpiar todo</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Listado de Materiales -->
-            <div class="col-lg-9" id="catalogo-resultados">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <p class="mb-0 text-muted">Se encontraron <strong>{{ materiales.paginator.count }}</strong> recurso{{ materiales.paginator.count|pluralize }}</p>
-                </div>
+                <!-- Listado de Materiales -->
+                <div class="col-lg-9">
+                    <!-- Búsqueda Rápida Siempre Visible (Fuera del offcanvas y del contenedor AJAX para no perder foco) -->
+                    <div class="mb-4">
+                        <div class="input-group shadow-sm" style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border);">
+                            <span class="input-group-text bg-white border-0 text-muted ps-3"><i class="fas fa-search"></i></span>
+                            <input type="text" name="q" id="searchQuery" class="form-control border-0 bg-white py-2.5 fs-6" placeholder="Búsqueda rápida por título, autor, ISBN..." value="{{ query }}">
+                            <button type="button" id="btnClearSearch" class="btn btn-white border-0 text-muted pe-3 align-items-center {% if not query %}d-none{% endif %}"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <div id="catalogo-resultados">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <p class="mb-0 text-muted">Se encontraron <strong>{{ materiales.paginator.count }}</strong> recurso{{ materiales.paginator.count|pluralize }}</p>
+                            <button class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold d-lg-none d-flex align-items-center gap-2" style="background-color: var(--primary); border: none;" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarFiltros" aria-controls="sidebarFiltros">
+                                <i class="fas fa-sliders-h"></i> Filtrar Acervo
+                            </button>
+                        </div>
 
                 {% if materiales %}
                     <div class="row g-4">
@@ -667,9 +690,10 @@
                         <a href="{% url 'catalogo_publico' %}" class="btn btn-primary rounded-pill px-4 mt-2" style="background-color: var(--primary); border: none;">Ver todo el catálogo</a>
                     </div>
                 {% endif %}
+                    </div>
+                </div>
             </div>
-
-        </div>
+        </form>
     </div>
 </main>
 
@@ -702,6 +726,17 @@
             // Update URL in the address bar without reloading
             window.history.pushState({}, '', url);
 
+            // Toggle search clear button visibility
+            const queryVal = document.getElementById('searchQuery')?.value || '';
+            const btnClear = document.getElementById('btnClearSearch');
+            if (btnClear) {
+                if (queryVal) {
+                    btnClear.classList.remove('d-none');
+                } else {
+                    btnClear.classList.add('d-none');
+                }
+            }
+
             try {
                 const response = await fetch(url);
                 const htmlText = await response.text();
@@ -726,10 +761,48 @@
             }
         }
 
+        function closeOffcanvas() {
+            const offcanvasEl = document.getElementById('sidebarFiltros');
+            if (offcanvasEl && typeof bootstrap !== 'undefined') {
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (bsOffcanvas) {
+                    bsOffcanvas.hide();
+                }
+            }
+        }
+
         // Intercept form submission
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
+                updateCatalog(1);
+                closeOffcanvas();
+            });
+        }
+
+        // Listen to input events on searchQuery to toggle clear button dynamically
+        const searchQueryInput = document.getElementById('searchQuery');
+        if (searchQueryInput) {
+            searchQueryInput.addEventListener('input', function() {
+                const btnClear = document.getElementById('btnClearSearch');
+                if (btnClear) {
+                    if (this.value) {
+                        btnClear.classList.remove('d-none');
+                    } else {
+                        btnClear.classList.add('d-none');
+                    }
+                }
+            });
+        }
+
+        // Handle clear search button click
+        const btnClearSearch = document.getElementById('btnClearSearch');
+        if (btnClearSearch) {
+            btnClearSearch.addEventListener('click', function() {
+                const queryInput = document.getElementById('searchQuery');
+                if (queryInput) {
+                    queryInput.value = '';
+                }
                 updateCatalog(1);
             });
         }
@@ -828,6 +901,7 @@
 
                 // 5. Actualizar el listado mediante la petición AJAX existente
                 updateCatalog(1);
+                closeOffcanvas();
             });
         }
 
